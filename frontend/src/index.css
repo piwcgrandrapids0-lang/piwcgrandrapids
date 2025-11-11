@@ -1,0 +1,371 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Church Colors - PIWC Grand Rapids */
+  --primary-blue: #003366;      /* Deep Blue - Main brand color */
+  --primary-yellow: #FFD700;    /* Gold/Yellow - Accent color */
+  --primary-white: #FFFFFF;     /* White - Clean background */
+  
+  /* Light Mode Colors */
+  --primary-red: #C41E3A;       /* For special accents like "I'm New" button */
+  --accent-blue-light: #0055AA; /* Lighter blue for hover states */
+  --accent-yellow-light: #FFEB3B; /* Lighter yellow for subtle highlights */
+  
+  /* Secondary Colors */
+  --secondary-light: #f8f9fa;
+  --secondary-gray: #6c757d;
+  --secondary-dark: #2c3e50;
+  
+  /* Background Colors */
+  --bg-white: #FFFFFF;
+  --bg-light: #F5F7FA;
+  --bg-dark: #1a1a2e;
+  --bg-blue-light: #E6F0FF;     /* Light blue background */
+  
+  /* Text Colors */
+  --text-primary: #2c3e50;
+  --text-secondary: #6c757d;
+  --text-light: #ffffff;
+  --text-blue: #003366;
+  
+  /* Shadows */
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+  
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+}
+
+/* Dark Mode Colors */
+[data-theme="dark"] {
+  /* Church Colors adapted for dark mode */
+  --primary-blue: #0055AA;      /* Lighter blue for dark bg */
+  --primary-yellow: #FFD700;    /* Gold stays vibrant */
+  --primary-white: #1a1f2e;     /* Dark background */
+  
+  /* Adjusted colors for dark mode */
+  --primary-red: #FF6B6B;
+  --accent-blue-light: #4A90E2;
+  --accent-yellow-light: #FFEB3B;
+  
+  /* Secondary Colors */
+  --secondary-light: #2c3440;
+  --secondary-gray: #9ca3af;
+  --secondary-dark: #f8f9fa;
+  
+  /* Background Colors */
+  --bg-white: #1a1f2e;
+  --bg-light: #252b3b;
+  --bg-dark: #0f1419;
+  --bg-blue-light: #1e2a3a;
+  
+  /* Text Colors */
+  --text-primary: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --text-light: #ffffff;
+  --text-blue: #4A90E2;
+  
+  /* Shadows adjusted for dark mode */
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.5);
+}
+
+body {
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+  background-color: var(--bg-white);
+  transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Playfair Display', serif;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+}
+
+h2 {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+h3 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+}
+
+p {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  font-family: 'Montserrat', sans-serif;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Utility Classes */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.section {
+  padding: 80px 0;
+}
+
+.section-title {
+  text-align: center;
+  margin-bottom: 3rem;
+  color: var(--primary-blue);
+}
+
+.section-subtitle {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  max-width: 700px;
+  margin: 0 auto 3rem;
+}
+
+/* Utility classes for sections with blue backgrounds */
+.section-blue {
+  background: var(--primary-blue);
+  color: var(--primary-white);
+}
+
+.section-blue .section-title {
+  color: var(--primary-white);
+}
+
+.section-blue .section-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.section-blue h1, 
+.section-blue h2, 
+.section-blue h3, 
+.section-blue h4 {
+  color: var(--primary-white);
+}
+
+.section-blue p {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* For sections with blue gradients */
+.hero .section-title,
+.page-header .section-title {
+  color: var(--primary-white);
+}
+
+/* Fix button visibility on blue/gradient backgrounds */
+.hero .btn-secondary,
+.page-header .btn-secondary {
+  background: transparent;
+  color: var(--primary-white);
+  border: 2px solid var(--primary-white);
+}
+
+.hero .btn-secondary:hover,
+.page-header .btn-secondary:hover {
+  background: var(--primary-white);
+  color: var(--primary-blue);
+  border-color: var(--primary-white);
+}
+
+.hero .btn-primary,
+.page-header .btn-primary {
+  background: var(--primary-white);
+  color: var(--primary-blue);
+  border: 2px solid var(--primary-white);
+}
+
+.hero .btn-primary:hover,
+.page-header .btn-primary:hover {
+  background: transparent;
+  color: var(--primary-white);
+  border-color: var(--primary-white);
+}
+
+.hero .btn-gold,
+.page-header .btn-gold {
+  background: var(--primary-yellow);
+  color: var(--primary-blue);
+  border: 2px solid var(--primary-yellow);
+}
+
+.hero .btn-gold:hover,
+.page-header .btn-gold:hover {
+  background: transparent;
+  color: var(--primary-yellow);
+  border-color: var(--primary-yellow);
+}
+
+/* Ensure all links are visible on blue backgrounds */
+.hero a,
+.page-header a,
+.section-blue a {
+  color: var(--primary-white);
+}
+
+.hero a:hover,
+.page-header a:hover,
+.section-blue a:hover {
+  color: var(--primary-yellow);
+}
+
+/* Global fix for CTA sections with blue backgrounds */
+.cta-section .btn-primary,
+.section-blue .btn-primary {
+  background: var(--primary-white);
+  color: var(--primary-blue);
+  border: 2px solid var(--primary-white);
+}
+
+.cta-section .btn-primary:hover,
+.section-blue .btn-primary:hover {
+  background: transparent;
+  color: var(--primary-white);
+  border-color: var(--primary-white);
+}
+
+.cta-section .btn-secondary,
+.section-blue .btn-secondary {
+  background: transparent;
+  color: var(--primary-white);
+  border: 2px solid var(--primary-white);
+}
+
+.cta-section .btn-secondary:hover,
+.section-blue .btn-secondary:hover {
+  background: var(--primary-white);
+  color: var(--primary-blue);
+  border-color: var(--primary-white);
+}
+
+.btn {
+  display: inline-block;
+  padding: 14px 32px;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 1rem;
+  text-align: center;
+  transition: all var(--transition-normal);
+  cursor: pointer;
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-primary {
+  background: var(--primary-blue);
+  color: var(--primary-white);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:hover {
+  background: var(--accent-blue-light);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--primary-blue);
+  border: 2px solid var(--primary-blue);
+}
+
+.btn-secondary:hover {
+  background: var(--primary-blue);
+  color: var(--primary-white);
+}
+
+.btn-gold {
+  background: var(--primary-yellow);
+  color: var(--primary-blue);
+  box-shadow: var(--shadow-md);
+  font-weight: 700;
+}
+
+.btn-gold:hover {
+  background: var(--accent-yellow-light);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+}
+
+/* Loading Spinner */
+.loading-spinner {
+  display: inline-block;
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(0, 51, 102, 0.2);
+  border-radius: 50%;
+  border-top-color: var(--primary-blue);
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .section {
+    padding: 60px 0;
+  }
+  
+  .btn {
+    padding: 12px 24px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-light);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-red);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #A31729;
+}
+
