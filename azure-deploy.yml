@@ -1,0 +1,32 @@
+# Azure Static Web Apps deployment configuration
+# This file configures the build and deployment for Azure Static Web Apps
+
+version: 1
+
+frontend:
+  app_location: "/frontend"
+  api_location: "/backend"
+  output_location: "build"
+  app_build_command: "npm run build"
+  api_build_command: "npm install"
+
+platform:
+  api_runtime: "node:18"
+
+routes:
+  - route: "/api/*"
+    allowedRoles:
+      - anonymous
+  - route: "/api/admin/*"
+    allowedRoles:
+      - authenticated
+  - route: "/*"
+    serve: "/index.html"
+    statusCode: 200
+
+navigation_fallback:
+  rewrite: "/index.html"
+  exclude:
+    - "/api/*"
+    - "/*.{css,scss,js,png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,eot}"
+
