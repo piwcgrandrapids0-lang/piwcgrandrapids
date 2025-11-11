@@ -1,0 +1,76 @@
+# Azure DevOps Pipeline for CI/CD
+
+trigger:
+  - main
+  - develop
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  FRONTEND_DIR: 'frontend'
+  BACKEND_DIR: 'backend'
+
+stages:
+  - stage: Build
+    displayName: 'Build Application'
+    jobs:
+      - job: BuildFrontend
+        displayName: 'Build Frontend'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '18.x'
+            displayName: 'Install Node.js'
+
+          - script: |
+              cd $(FRONTEND_DIR)
+              npm ci
+              npm run build
+            displayName: 'Install dependencies and build frontend'
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: '$(FRONTEND_DIR)/build'
+              ArtifactName: 'frontend'
+            displayName: 'Publish frontend artifacts'
+
+      - job: BuildBackend
+        displayName: 'Build Backend'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '18.x'
+            displayName: 'Install Node.js'
+
+          - script: |
+              cd $(BACKEND_DIR)
+              npm ci
+            displayName: 'Install backend dependencies'
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: '$(BACKEND_DIR)'
+              ArtifactName: 'backend'
+            displayName: 'Publish backend artifacts'
+
+  - stage: Deploy
+    displayName: 'Deploy to Azure'
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployWeb
+        displayName: 'Deploy to Azure App Service'
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureWebApp@1
+                  inputs:
+                    azureSubscription: '$(AZURE_SUBSCRIPTION)'
+                    appType: 'webAppLinux'
+                    appName: '$(AZURE_APP_NAME)'
+                    package: '$(Pipeline.Workspace)/backend'
+                    runtimeStack: 'NODE|18-lts'
+
