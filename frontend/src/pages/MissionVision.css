@@ -1,0 +1,250 @@
+.mission-vision-page {
+  width: 100%;
+}
+
+.mv-hero {
+  background: linear-gradient(135deg, var(--primary-blue) 0%, #2c3e50 100%);
+  color: white;
+  padding: 100px 20px 80px;
+  text-align: center;
+}
+
+.mv-hero h1 {
+  color: white;
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  margin-bottom: 1.5rem;
+}
+
+.mission-section {
+  background: white;
+}
+
+.vision-section {
+  background: var(--bg-light);
+}
+
+.mv-card {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 3rem;
+  background: var(--bg-light);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+}
+
+.vision-card {
+  background: white;
+}
+
+.mv-icon {
+  font-size: 5rem;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.mv-card h2 {
+  text-align: center;
+  color: var(--primary-red);
+  font-size: 2.5rem;
+  margin-bottom: 2rem;
+}
+
+.mv-statement {
+  text-align: center;
+  font-size: 1.4rem;
+  line-height: 1.8;
+  color: var(--text-primary);
+  font-weight: 500;
+  margin-bottom: 3rem;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  border-left: 5px solid var(--primary-red);
+}
+
+.vision-card .mv-statement {
+  background: var(--bg-light);
+}
+
+.mv-details {
+  display: grid;
+  gap: 2rem;
+}
+
+.mv-detail {
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.mv-detail h3 {
+  color: var(--primary-blue);
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.mv-detail p {
+  color: var(--text-secondary);
+  line-height: 1.8;
+  font-size: 1.05rem;
+}
+
+.vision-pillars {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.pillar {
+  padding: 2rem;
+  background: var(--bg-light);
+  border-radius: 12px;
+  text-align: center;
+  transition: all var(--transition-normal);
+  border: 2px solid transparent;
+}
+
+.pillar:hover {
+  border-color: var(--primary-red);
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+}
+
+.pillar-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.pillar h3 {
+  color: var(--primary-blue);
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+}
+
+.pillar p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.values-action-section {
+  background: white;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+}
+
+.action-card {
+  background: var(--bg-light);
+  padding: 2.5rem 2rem;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+  position: relative;
+  padding-top: 4rem;
+}
+
+.action-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-5px);
+}
+
+.action-number {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--primary-red);
+  color: white;
+  font-size: 2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+}
+
+.action-card h3 {
+  color: var(--primary-blue);
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.action-card p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  text-align: center;
+}
+
+.cta-section {
+  background: linear-gradient(135deg, var(--primary-red) 0%, #A31729 100%);
+  color: white;
+}
+
+.cta-content {
+  text-align: center;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.cta-content h2 {
+  color: white;
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.cta-content p {
+  font-size: 1.2rem;
+  margin-bottom: 2.5rem;
+  opacity: 0.95;
+  line-height: 1.7;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 968px) {
+  .mv-card {
+    padding: 2rem;
+  }
+
+  .vision-pillars {
+    grid-template-columns: 1fr;
+  }
+
+  .action-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .mv-hero {
+    padding: 80px 20px 60px;
+  }
+
+  .mv-statement {
+    font-size: 1.2rem;
+    padding: 1.5rem;
+  }
+
+  .cta-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .cta-buttons .btn {
+    width: 100%;
+  }
+}
+
