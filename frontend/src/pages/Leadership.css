@@ -1,0 +1,241 @@
+.leadership-page {
+  width: 100%;
+  background: white;
+}
+
+/* Hero Header */
+.leadership-header {
+  background: var(--primary-blue);
+  padding: 120px 20px 80px;
+  text-align: center;
+}
+
+.leadership-header h1 {
+  color: var(--primary-white);
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+/* Lead Pastor Section */
+.lead-pastor-section {
+  background: var(--bg-light);
+  padding: 80px 20px;
+}
+
+.lead-pastor-card {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 4rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  background: white;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.pastor-image-container {
+  width: 350px;
+  height: 450px;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.pastor-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pastor-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2rem 0;
+}
+
+.pastor-info h2 {
+  color: var(--text-primary);
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+}
+
+.pastor-title {
+  color: var(--text-secondary);
+  font-size: 1.25rem;
+  margin: 0 0 2rem 0;
+  font-weight: 500;
+}
+
+.btn-contact-pastor {
+  background: var(--primary-yellow);
+  color: var(--primary-blue);
+  padding: 14px 32px;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  width: fit-content;
+  margin-bottom: 2rem;
+  transition: all var(--transition-normal);
+}
+
+.btn-contact-pastor:hover {
+  background: var(--accent-yellow-light);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+}
+
+.pastor-bio {
+  color: var(--text-secondary);
+  line-height: 1.8;
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+/* Leaders Grid Section */
+.leaders-grid-section {
+  background: white;
+  padding: 80px 20px;
+}
+
+.leaders-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.leader-card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all var(--transition-normal);
+}
+
+.leader-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transform: translateY(-5px);
+}
+
+.leader-image-container {
+  width: 100%;
+  height: 280px;
+  background: #f0f0f0;
+  overflow: hidden;
+}
+
+.leader-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.leader-details {
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.leader-details h3 {
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+}
+
+.leader-role {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  margin: 0 0 1.5rem 0;
+  font-weight: 500;
+}
+
+.leader-contact-link {
+  color: var(--primary-blue);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: color var(--transition-normal);
+}
+
+.leader-contact-link:hover {
+  color: var(--primary-yellow);
+  text-decoration: underline;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .leaders-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .leadership-header {
+    padding: 100px 20px 60px;
+  }
+
+  .leadership-header h1 {
+    font-size: 2.5rem;
+  }
+
+  .lead-pastor-card {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .pastor-image-container {
+    width: 100%;
+    height: 400px;
+  }
+
+  .pastor-info {
+    padding: 1rem;
+  }
+
+  .pastor-info h2 {
+    font-size: 2rem;
+  }
+
+  .leaders-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .leader-image-container {
+    height: 350px;
+  }
+}
+
+@media (max-width: 480px) {
+  .leadership-header h1 {
+    font-size: 2rem;
+  }
+
+  .pastor-info h2 {
+    font-size: 1.75rem;
+  }
+
+  .pastor-title {
+    font-size: 1.1rem;
+  }
+
+  .btn-contact-pastor {
+    width: 100%;
+    text-align: center;
+  }
+
+  .leader-image-container {
+    height: 300px;
+  }
+}
