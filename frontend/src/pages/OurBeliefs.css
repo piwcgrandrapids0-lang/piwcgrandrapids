@@ -1,0 +1,174 @@
+.beliefs-page {
+  width: 100%;
+}
+
+.beliefs-hero {
+  background: linear-gradient(135deg, var(--primary-red) 0%, #A31729 100%);
+  color: white;
+  padding: 100px 20px 80px;
+  text-align: center;
+}
+
+.beliefs-hero h1 {
+  color: white;
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  margin-bottom: 1.5rem;
+}
+
+.beliefs-intro {
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.beliefs-intro h2 {
+  color: var(--primary-blue);
+  margin-bottom: 1.5rem;
+}
+
+.beliefs-intro p {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+}
+
+.beliefs-list-section {
+  background: var(--bg-light);
+}
+
+.beliefs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 2rem;
+}
+
+.belief-card {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+  position: relative;
+  border-left: 4px solid var(--primary-red);
+}
+
+.belief-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
+
+.belief-number {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--primary-red);
+  opacity: 0.15;
+  font-family: 'Playfair Display', serif;
+}
+
+.belief-card h3 {
+  color: var(--primary-blue);
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  padding-right: 60px;
+}
+
+.belief-card p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  font-size: 1rem;
+}
+
+.statement-section {
+  background: white;
+}
+
+.statement-content {
+  max-width: 900px;
+  margin: 0 auto;
+  background: var(--bg-light);
+  padding: 3rem;
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+}
+
+.statement-content p {
+  font-size: 1.1rem;
+  line-height: 1.9;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  text-align: justify;
+}
+
+.statement-content strong {
+  color: var(--primary-red);
+  font-weight: 600;
+}
+
+.questions-section {
+  background: var(--primary-blue);
+  color: white;
+}
+
+.questions-box {
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.questions-box h2 {
+  color: white;
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.questions-box p {
+  font-size: 1.2rem;
+  margin-bottom: 2.5rem;
+  opacity: 0.95;
+  line-height: 1.7;
+}
+
+.questions-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 968px) {
+  .beliefs-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .statement-content {
+    padding: 2rem;
+  }
+
+  .statement-content p {
+    text-align: left;
+  }
+}
+
+@media (max-width: 640px) {
+  .beliefs-hero {
+    padding: 80px 20px 60px;
+  }
+
+  .belief-number {
+    font-size: 2rem;
+  }
+
+  .questions-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .questions-buttons .btn {
+    width: 100%;
+  }
+}
+
