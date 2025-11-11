@@ -145,8 +145,8 @@ npm start
 - **Website**: http://localhost:3000
 - **API Health Check**: http://localhost:5001/api/health
 - **Admin Login**: 
-  - Email: `admin@piwcgr.org`
-  - Password: `admin123`
+  - Email: `check Google doc`
+  - Password: `check Google doc`
   - **⚠️ Change these in production!**
 
 ---
