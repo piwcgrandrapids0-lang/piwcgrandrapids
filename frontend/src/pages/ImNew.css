@@ -1,0 +1,206 @@
+.im-new-page {
+  width: 100%;
+}
+
+.im-new-hero {
+  background: linear-gradient(135deg, var(--primary-red) 0%, #A31729 100%);
+  color: white;
+  padding: 100px 20px 80px;
+  text-align: center;
+}
+
+.im-new-hero h1 {
+  color: white;
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  margin-bottom: 1.5rem;
+}
+
+.hero-text {
+  font-size: 1.25rem;
+  max-width: 800px;
+  margin: 0 auto;
+  opacity: 0.95;
+  line-height: 1.7;
+}
+
+.expect-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2.5rem;
+}
+
+.expect-item {
+  text-align: center;
+  padding: 2rem;
+  background: var(--bg-light);
+  border-radius: 12px;
+  transition: all var(--transition-normal);
+}
+
+.expect-item:hover {
+  background: white;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-5px);
+}
+
+.expect-icon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+}
+
+.expect-item h3 {
+  color: var(--primary-blue);
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.expect-item p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.faq-section {
+  background: var(--bg-light);
+}
+
+.faq-container {
+  max-width: 900px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.faq-item {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-normal);
+}
+
+.faq-item:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.faq-item h3 {
+  color: var(--primary-red);
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.faq-item p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.plan-visit-section {
+  background: white;
+}
+
+.visit-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 3rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.visit-card {
+  background: var(--bg-light);
+  padding: 3rem 2rem;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: var(--shadow-md);
+}
+
+.visit-card h3 {
+  color: var(--primary-blue);
+  font-size: 1.75rem;
+  margin-bottom: 2rem;
+}
+
+.visit-detail {
+  margin-bottom: 1.5rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.visit-detail strong {
+  color: var(--primary-red);
+  font-weight: 600;
+}
+
+.visit-card .btn {
+  margin-top: 1rem;
+}
+
+.next-steps-section {
+  background: var(--primary-blue);
+  color: white;
+}
+
+.next-steps-section .section-title {
+  color: white;
+}
+
+.next-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+}
+
+.next-step-card {
+  text-align: center;
+  padding: 2.5rem 2rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  transition: all var(--transition-normal);
+}
+
+.next-step-card:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-5px);
+}
+
+.step-number {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--primary-red);
+  color: white;
+  font-size: 2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+}
+
+.next-step-card h3 {
+  color: white;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.next-step-card p {
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .im-new-hero {
+    padding: 80px 20px 60px;
+  }
+
+  .expect-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .visit-info {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
