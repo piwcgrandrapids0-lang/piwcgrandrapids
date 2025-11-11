@@ -1,0 +1,371 @@
+import React, { useState, useEffect } from 'react';
+import './AdminSermons.css';
+
+const AdminSermons = () => {
+  const [sermons, setSermons] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [editingSermon, setEditingSermon] = useState(null);
+  const [videoSource, setVideoSource] = useState('youtube'); // 'youtube' or 'upload'
+  const [uploading, setUploading] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    speaker: '',
+    date: '',
+    series: '',
+    description: '',
+    videoUrl: ''
+  });
+
+  useEffect(() => {
+    fetchSermons();
+  }, []);
+
+  const fetchSermons = async () => {
+    try {
+      const response = await fetch('/api/sermons');
+      const data = await response.json();
+      setSermons(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching sermons:', error);
+      setSermons([]);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleVideoUpload = async (file) => {
+    if (!file) return;
+    
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('video', file);
+    formData.append('uploadType', 'videos');
+    
+    try {
+      const response = await fetch('/api/upload-video', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`Video uploaded successfully! (${(data.size / (1024 * 1024)).toFixed(2)} MB)`);
+        setFormData(prev => ({ ...prev, videoUrl: data.url }));
+      } else {
+        alert(`Upload failed: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Video upload error:', error);
+      alert(`Upload failed: ${error.message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const extractYouTubeId = (url) => {
+    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[7].length === 11) ? match[7] : null;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Convert YouTube URL to embed format
+    let videoUrl = formData.videoUrl;
+    if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+      const videoId = extractYouTubeId(videoUrl);
+      if (videoId) {
+        videoUrl = `https://www.youtube.com/embed/${videoId}`;
+      }
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const url = editingSermon ? `/api/sermons/${editingSermon.id}` : '/api/sermons';
+      const method = editingSermon ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ ...formData, videoUrl })
+      });
+
+      if (response.ok) {
+        fetchSermons();
+        resetForm();
+        alert(editingSermon ? 'Sermon updated!' : 'Sermon added!');
+      }
+    } catch (error) {
+      console.error('Error saving sermon:', error);
+      alert('Error saving sermon');
+    }
+  };
+
+  const handleEdit = (sermon) => {
+    setEditingSermon(sermon);
+    setFormData({
+      title: sermon.title,
+      speaker: sermon.speaker,
+      date: sermon.date,
+      series: sermon.series,
+      description: sermon.description,
+      videoUrl: sermon.videoUrl
+    });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (sermonId) => {
+    if (!window.confirm('Are you sure you want to delete this sermon?')) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/sermons/${sermonId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        fetchSermons();
+        alert('Sermon deleted!');
+      }
+    } catch (error) {
+      console.error('Error deleting sermon:', error);
+      alert('Error deleting sermon');
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      speaker: '',
+      date: '',
+      series: '',
+      description: '',
+      videoUrl: ''
+    });
+    setEditingSermon(null);
+    setShowForm(false);
+  };
+
+  return (
+    <div className="admin-sermons">
+      <div className="section-header">
+        <h2>🎥 Sermons Management</h2>
+        <button onClick={() => setShowForm(!showForm)} className="btn btn-gold">
+          {showForm ? '✕ Cancel' : '➕ Add Sermon'}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="sermon-form-container">
+          <h3>{editingSermon ? 'Edit Sermon' : 'Add New Sermon'}</h3>
+          <form onSubmit={handleSubmit} className="sermon-form">
+            <div className="form-row">
+              <div className="form-group">
+                <label>Sermon Title *</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g., The Power of Prayer"
+                />
+              </div>
+              <div className="form-group">
+                <label>Speaker *</label>
+                <input
+                  type="text"
+                  name="speaker"
+                  value={formData.speaker}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g., Pastor John Doe"
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Date *</label>
+                <input
+                  type="date"
+                  name="date"
+                  value={formData.date}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Series</label>
+                <input
+                  type="text"
+                  name="series"
+                  value={formData.series}
+                  onChange={handleChange}
+                  placeholder="e.g., Faith Series"
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Video Source *</label>
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    value="youtube"
+                    checked={videoSource === 'youtube'}
+                    onChange={(e) => setVideoSource(e.target.value)}
+                    style={{ marginRight: '0.5rem' }}
+                  />
+                  📺 YouTube URL
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    value="upload"
+                    checked={videoSource === 'upload'}
+                    onChange={(e) => setVideoSource(e.target.value)}
+                    style={{ marginRight: '0.5rem' }}
+                  />
+                  📤 Upload Video File
+                </label>
+              </div>
+
+              {videoSource === 'youtube' ? (
+                <>
+                  <input
+                    type="url"
+                    name="videoUrl"
+                    value={formData.videoUrl}
+                    onChange={handleChange}
+                    required
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                  <small>Paste any YouTube URL - it will be automatically converted to embed format</small>
+                </>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <input
+                        type="text"
+                        value={formData.videoUrl}
+                        onChange={(e) => setFormData(prev => ({ ...prev, videoUrl: e.target.value }))}
+                        placeholder="/uploads/videos/sermon.mp4"
+                        readOnly={uploading}
+                      />
+                      <small>Video URL (auto-filled after upload)</small>
+                    </div>
+                    <div>
+                      <label 
+                        htmlFor="videoFileUpload" 
+                        className="btn btn-secondary" 
+                        style={{ cursor: 'pointer', margin: 0 }}
+                      >
+                        {uploading ? '⏳ Uploading...' : '📤 Upload Video'}
+                      </label>
+                      <input
+                        id="videoFileUpload"
+                        type="file"
+                        accept="video/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            handleVideoUpload(file);
+                          }
+                        }}
+                        disabled={uploading}
+                      />
+                    </div>
+                  </div>
+                  <small style={{ display: 'block', marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
+                    ⚠️ Maximum file size: 100MB. Supported formats: MP4, MOV, AVI, WMV, FLV, MKV, WEBM
+                  </small>
+                </>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label>Description *</label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                required
+                rows="4"
+                placeholder="Brief description of the sermon..."
+              />
+            </div>
+
+            <div className="form-actions">
+              <button type="button" onClick={resetForm} className="btn btn-secondary">
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary">
+                {editingSermon ? '💾 Update Sermon' : '➕ Add Sermon'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div className="sermons-list">
+        <h3>All Sermons ({sermons.length})</h3>
+        {sermons.length === 0 ? (
+          <div className="empty-state">
+            <p>No sermons yet. Add your first sermon!</p>
+          </div>
+        ) : (
+          <div className="sermons-grid">
+            {sermons.map(sermon => (
+              <div key={sermon.id} className="sermon-card">
+                <div className="sermon-video">
+                  <iframe
+                    src={sermon.videoUrl}
+                    title={sermon.title}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                </div>
+                <div className="sermon-info">
+                  <h4>{sermon.title}</h4>
+                  <p className="sermon-meta">
+                    <strong>🎤 Speaker:</strong> {sermon.speaker}<br />
+                    <strong>📅 Date:</strong> {new Date(sermon.date).toLocaleDateString()}<br />
+                    {sermon.series && <><strong>📚 Series:</strong> {sermon.series}<br /></>}
+                  </p>
+                  <p className="sermon-description">{sermon.description}</p>
+                  <div className="sermon-actions">
+                    <button onClick={() => handleEdit(sermon)} className="btn btn-secondary btn-small">
+                      ✏️ Edit
+                    </button>
+                    <button onClick={() => handleDelete(sermon.id)} className="btn btn-danger btn-small">
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default AdminSermons;
+
