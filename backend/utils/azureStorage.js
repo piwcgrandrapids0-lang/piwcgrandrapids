@@ -24,11 +24,19 @@ class AzureStorageService {
    */
   initialize() {
     try {
+      if (!this.connectionString) {
+        console.warn('AZURE_STORAGE_CONNECTION_STRING is not set');
+        this.blobServiceClient = null;
+        this.containerClient = null;
+        return;
+      }
+      
       this.blobServiceClient = BlobServiceClient.fromConnectionString(this.connectionString);
       this.containerClient = this.blobServiceClient.getContainerClient(this.containerName);
-      console.log('Azure Blob Storage initialized');
+      console.log(`Azure Blob Storage initialized - Container: ${this.containerName}`);
     } catch (error) {
       console.error('Error initializing Azure Blob Storage:', error.message);
+      console.error('Error stack:', error.stack);
       this.blobServiceClient = null;
       this.containerClient = null;
     }
@@ -36,8 +44,14 @@ class AzureStorageService {
 
   /**
    * Check if Azure Storage is configured and available
+   * Re-initialize if connection string is available but not initialized
    */
   isConfigured() {
+    // If we have a connection string but haven't initialized, try to initialize now
+    if (this.connectionString && (!this.blobServiceClient || !this.containerClient)) {
+      console.log('Re-initializing Azure Blob Storage...');
+      this.initialize();
+    }
     return this.blobServiceClient !== null && this.containerClient !== null;
   }
 
@@ -46,19 +60,23 @@ class AzureStorageService {
    */
   async ensureContainer() {
     if (!this.isConfigured()) {
-      throw new Error('Azure Storage is not configured');
+      throw new Error('Azure Storage is not configured. Please set AZURE_STORAGE_CONNECTION_STRING environment variable.');
     }
 
     try {
       const exists = await this.containerClient.exists();
       if (!exists) {
+        console.log(`Creating container "${this.containerName}"...`);
         await this.containerClient.create({
           access: 'blob' // Public read access for blobs
         });
-        console.log(`Container "${this.containerName}" created`);
+        console.log(`Container "${this.containerName}" created successfully`);
+      } else {
+        console.log(`Container "${this.containerName}" already exists`);
       }
     } catch (error) {
       console.error('Error ensuring container exists:', error.message);
+      console.error('Error details:', error);
       throw error;
     }
   }
