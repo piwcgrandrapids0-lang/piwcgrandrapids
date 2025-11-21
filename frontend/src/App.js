@@ -15,6 +15,7 @@ import ImNew from './pages/ImNew';
 import AboutUs from './pages/AboutUs';
 import OurBeliefs from './pages/OurBeliefs';
 import MissionVision from './pages/MissionVision';
+import Tenets from './pages/Tenets';
 import Leadership from './pages/Leadership';
 import Ministries from './pages/Ministries';
 import Watch from './pages/Watch';
@@ -41,6 +42,7 @@ function App() {
                 <Route path="/about" element={<AboutUs />} />
                 <Route path="/beliefs" element={<OurBeliefs />} />
                 <Route path="/mission-vision" element={<MissionVision />} />
+                <Route path="/tenets" element={<Tenets />} />
                 <Route path="/leadership" element={<Leadership />} />
                 <Route path="/ministries" element={<Ministries />} />
                 <Route path="/watch" element={<Watch />} />
