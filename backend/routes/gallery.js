@@ -50,7 +50,32 @@ const readGallery = () => {
       return initialData;
     }
     const data = fs.readFileSync(galleryDataPath, 'utf8');
-    return JSON.parse(data);
+    const galleryData = JSON.parse(data);
+    
+    // Clean up images with local URLs (they're lost after deployment)
+    // Keep only images with Azure URLs or external URLs
+    const validImages = galleryData.images.filter(img => {
+      if (!img.imageUrl) return false;
+      // Keep Azure Blob Storage URLs
+      if (img.imageUrl.includes('blob.core.windows.net')) return true;
+      // Keep external URLs (http/https)
+      if (img.imageUrl.startsWith('http://') || img.imageUrl.startsWith('https://')) return true;
+      // Remove local URLs (they're lost after deployment)
+      if (img.imageUrl.startsWith('/uploads/')) {
+        console.log(`Removing image with local URL (lost after deployment): ${img.title} - ${img.imageUrl}`);
+        return false;
+      }
+      return true;
+    });
+    
+    // Only update if we removed some images
+    if (validImages.length !== galleryData.images.length) {
+      galleryData.images = validImages;
+      writeGallery(galleryData);
+      console.log(`Cleaned up ${galleryData.images.length - validImages.length} images with local URLs`);
+    }
+    
+    return galleryData;
   } catch (error) {
     console.error('Error reading gallery:', error);
     return { images: [], nextId: 1 };
@@ -115,7 +140,9 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
     const galleryData = readGallery();
     let imageUrl;
 
-    // Try to upload to Azure if configured, otherwise use local storage
+    // In production, always use Azure Blob Storage
+    const isProduction = process.env.NODE_ENV === 'production';
+    
     if (azureStorage.isConfigured()) {
       try {
         const uploadResult = await azureStorage.uploadImage(
@@ -125,10 +152,21 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
           'gallery'
         );
         imageUrl = uploadResult.url;
-        console.log('Image uploaded to Azure Blob Storage');
+        console.log('Image uploaded to Azure Blob Storage:', uploadResult.url);
       } catch (azureError) {
-        console.error('Azure upload failed, falling back to local storage:', azureError.message);
-        // Fall back to local storage
+        console.error('Azure upload failed:', azureError.message);
+        console.error('Error details:', azureError);
+        
+        // In production, fail hard - don't use local storage
+        if (isProduction) {
+          return res.status(500).json({ 
+            error: 'Failed to upload image to Azure Blob Storage. Please check Azure Storage configuration.',
+            details: azureError.message
+          });
+        }
+        
+        // In development, allow fallback to local storage
+        console.warn(' Falling back to local storage (development mode only)');
         const uploadsDir = path.join(__dirname, '../uploads/gallery');
         if (!fs.existsSync(uploadsDir)) {
           fs.mkdirSync(uploadsDir, { recursive: true });
@@ -140,8 +178,15 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
         imageUrl = `/uploads/gallery/${filename}`;
       }
     } else {
-      // Use local storage if Azure is not configured
-      console.log('Azure Storage not configured, using local storage');
+      // Azure not configured
+      if (isProduction) {
+        return res.status(500).json({ 
+          error: 'Azure Blob Storage is not configured. Please set AZURE_STORAGE_CONNECTION_STRING environment variable.'
+        });
+      }
+      
+      // In development, allow local storage
+      console.warn(' Azure Storage not configured, using local storage (development mode only)');
       const uploadsDir = path.join(__dirname, '../uploads/gallery');
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
@@ -201,10 +246,16 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         // Azure Blob Storage URL - extract blob name and delete
         try {
           const urlParts = new URL(image.imageUrl);
-          const blobName = urlParts.pathname.split('/').slice(2).join('/'); // Remove container name
-          if (azureStorage.isConfigured()) {
-            await azureStorage.deleteImage(blobName);
-            console.log('Deleted from Azure:', blobName);
+          // Extract blob name: pathname is like /church-images/gallery/filename.png
+          // We need just gallery/filename.png
+          const pathParts = urlParts.pathname.split('/').filter(p => p);
+          const containerIndex = pathParts.findIndex(p => p === 'church-images');
+          if (containerIndex >= 0 && containerIndex < pathParts.length - 1) {
+            const blobName = pathParts.slice(containerIndex + 1).join('/');
+            if (azureStorage.isConfigured()) {
+              await azureStorage.deleteImage(blobName);
+              console.log('Deleted from Azure:', blobName);
+            }
           }
         } catch (azureError) {
           console.error('Error deleting from Azure:', azureError.message);
@@ -222,13 +273,18 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     // Remove from array
     galleryData.images.splice(imageIndex, 1);
 
+    // Save changes to file
     if (!writeGallery(galleryData)) {
       return res.status(500).json({ error: 'Failed to update gallery data' });
     }
 
-    console.log('Deleted gallery image:', imageId);
+    console.log('Deleted gallery image:', imageId, '- Removed from gallery.json and storage');
 
-    res.json({ message: 'Image deleted successfully' });
+    res.json({ 
+      message: 'Image deleted successfully',
+      deleted: true,
+      imageId: imageId
+    });
   } catch (error) {
     console.error('Error deleting image:', error);
     res.status(500).json({ error: 'Failed to delete image' });
@@ -247,6 +303,64 @@ router.get('/category/:category', (req, res) => {
   } catch (error) {
     console.error('Error fetching images by category:', error);
     res.status(500).json({ error: 'Failed to fetch images' });
+  }
+});
+
+// SYNC: Recover images from Azure Blob Storage (admin only)
+router.post('/sync-from-azure', authMiddleware, async (req, res) => {
+  try {
+    if (!azureStorage.isConfigured()) {
+      return res.status(500).json({ error: 'Azure Storage is not configured' });
+    }
+
+    const galleryData = readGallery();
+    const existingUrls = new Set(galleryData.images.map(img => img.imageUrl));
+
+    // List all images in Azure Blob Storage
+    const azureImages = await azureStorage.listImages('gallery/');
+    
+    let addedCount = 0;
+    for (const azureImage of azureImages) {
+      // Skip if already in gallery
+      if (existingUrls.has(azureImage.url)) {
+        continue;
+      }
+
+      // Extract date from filename (format: gallery/TIMESTAMP-ID.ext)
+      const filename = azureImage.name.split('/').pop();
+      const timestampMatch = filename.match(/^(\d+)-/);
+      const date = timestampMatch ? new Date(parseInt(timestampMatch[1])).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+
+      // Add to gallery
+      const newImage = {
+        id: galleryData.nextId++,
+        title: `Recovered Image ${galleryData.nextId - 1}`,
+        category: 'general',
+        date: date,
+        description: 'Recovered from Azure Blob Storage',
+        imageUrl: azureImage.url,
+        createdAt: new Date(azureImage.lastModified).toISOString()
+      };
+
+      galleryData.images.push(newImage);
+      existingUrls.add(azureImage.url);
+      addedCount++;
+    }
+
+    if (addedCount > 0) {
+      if (!writeGallery(galleryData)) {
+        return res.status(500).json({ error: 'Failed to save gallery data' });
+      }
+    }
+
+    res.json({
+      message: `Synced ${addedCount} images from Azure Blob Storage`,
+      added: addedCount,
+      total: galleryData.images.length
+    });
+  } catch (error) {
+    console.error('Error syncing from Azure:', error);
+    res.status(500).json({ error: 'Failed to sync images from Azure' });
   }
 });
 

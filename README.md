@@ -144,9 +144,7 @@ npm start
 
 - **Website**: http://localhost:3000
 - **API Health Check**: http://localhost:5001/api/health
-- **Admin Login**: 
-  - Email: `check Google doc`
-  - Password: `check Google doc`
+- **Admin Login**: See `backend/env.example.txt` for default credentials
   - **⚠️ Change these in production!**
 
 ---
@@ -158,8 +156,9 @@ Complete guides for setup, deployment, and administration:
 | Guide | Description |
 |-------|-------------|
 | **[SETUP.md](SETUP.md)** | Local development setup and configuration |
-| **[AZURE_DEPLOYMENT.md](AZURE_DEPLOYMENT.md)** | Complete Azure deployment guide |
+| **[AZURE_DEPLOYMENT.md](AZURE_DEPLOYMENT.md)** | Complete Azure deployment guide with troubleshooting |
 | **[ADMIN_GUIDE.md](ADMIN_GUIDE.md)** | Admin dashboard features and usage |
+| **[frontend/DEPLOYMENT_TOKEN.md](frontend/DEPLOYMENT_TOKEN.md)** | Azure Static Web Apps deployment token management |
 | **README.md** | This file - project overview |
 
 **Quick Links:**
@@ -231,17 +230,26 @@ piwcgrandrapids/
 │   └── package.json
 │
 ├── backend/                     # Express API server
+│   ├── data/                   # Persistent data (excluded from deployment)
+│   │   ├── sermons.json       # Sermons and video URLs
+│   │   ├── events.json        # Events
+│   │   ├── messages.json      # Contact messages
+│   │   ├── prayers.json       # Prayer requests
+│   │   ├── gallery.json       # Gallery metadata
+│   │   └── content.json       # Website content
 │   ├── middleware/
 │   │   └── auth.js             # JWT authentication
 │   ├── routes/
 │   │   ├── auth.js             # Login/verify
 │   │   ├── chatbot.js          # AI chatbot
 │   │   ├── contact.js          # Contact forms
+│   │   ├── content.js          # Website content
 │   │   ├── prayers.js          # Prayer requests
 │   │   ├── sermons.js          # Sermon CRUD
 │   │   ├── events.js           # Event CRUD
 │   │   └── gallery.js          # Photo gallery & uploads
 │   ├── utils/
+│   │   ├── azureStorage.js     # Azure Blob Storage integration
 │   │   ├── churchInfo.js       # Central church data
 │   │   ├── chatbotKnowledge.js # FAQ library
 │   │   ├── visitorHelper.js    # Visitor assistance
@@ -262,7 +270,7 @@ piwcgrandrapids/
 
 This project is configured for Microsoft Azure with:
 - ✅ **Frontend**: Azure Static Web Apps
-- ✅ **Backend**: Azure App Service
+- ✅ **Backend**: Azure App Service (B1 Basic)
 - ✅ **Storage**: Azure Blob Storage for images
 - ✅ **Cost**: ~$15-$25/month
 
@@ -283,26 +291,42 @@ This project is configured for Microsoft Azure with:
    az login
    ```
 
-3. **Run Deployment Script**:
+3. **Deploy Backend**:
    ```bash
-   # See AZURE_DEPLOYMENT.md for complete deployment commands
-   # Includes: Resource Group, Storage Account, App Service, Static Web App
+   cd backend
+   zip -r backend-deploy.zip . -x "*.git*" "*.env" "node_modules/*" "uploads/*" "data/*" "*.DS_Store" "backend-*.zip"
+   az webapp deploy --resource-group piwc-grandrapids-rg --name piwcgr-api --src-path backend-deploy.zip --type zip
+   rm backend-deploy.zip  # Clean up
    ```
 
-4. **Configure Environment Variables**:
-   - Set Azure Storage connection string
-   - Configure SMTP for emails
-   - Add Gemini API key
-   - See `.env.example` for all required variables
+4. **Deploy Frontend**:
+   ```bash
+   cd frontend
+   npm run build
+   swa deploy ./build --deployment-token "YOUR_TOKEN" --env production
+   ```
 
 **Full step-by-step instructions**: [AZURE_DEPLOYMENT.md](AZURE_DEPLOYMENT.md)
+
+### Data Persistence
+
+**Important**: All data persists between deployments:
+- ✅ **Sermons**: Stored in `backend/data/sermons.json` on Azure (excluded from deployment)
+- ✅ **Events**: Stored in `backend/data/events.json` on Azure
+- ✅ **Messages**: Stored in `backend/data/messages.json` on Azure
+- ✅ **Prayers**: Stored in `backend/data/prayers.json` on Azure
+- ✅ **Gallery Metadata**: Stored in `backend/data/gallery.json` on Azure
+- ✅ **Images**: Stored in Azure Blob Storage (permanent cloud storage)
+- ✅ **Videos**: YouTube URLs stored in `sermons.json`
+
+**Note**: The `backend/data/` directory is excluded from deployment to preserve data on Azure between redeployments.
 
 ### Cost Estimate (Azure)
 
 | Service | Monthly Cost |
 |---------|-------------|
 | Static Web Apps (Free Tier) | $0 |
-| App Service (B1) | $13 |
+| App Service (B1 Basic) | $13.14 |
 | Blob Storage | $1-$5 |
 | Bandwidth | $0-$5 |
 | **Total** | **~$15-$25/month** |
@@ -382,4 +406,4 @@ For issues or questions:
 **Built with ❤️ for PIWC Grand Rapids**  
 *The Church of Pentecost USA, Inc. - Detroit District*
 
-**Last Updated**: November 11, 2025 | **Version**: 1.0.0
+**Last Updated**: November 21, 2025 | **Version**: 1.0.1

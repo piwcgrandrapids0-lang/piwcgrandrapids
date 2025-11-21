@@ -20,7 +20,17 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 // Middleware
-app.use(cors());
+// CORS configuration - allow frontend origin
+app.use(cors({
+  origin: [
+    'https://icy-beach-06a0b2a0f.3.azurestaticapps.net',
+    'http://localhost:3000',
+    'http://localhost:5001'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 

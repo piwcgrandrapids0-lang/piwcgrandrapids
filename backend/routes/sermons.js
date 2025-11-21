@@ -1,62 +1,55 @@
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
+const fs = require('fs');
+const path = require('path');
 
 const router = express.Router();
 
-// In-memory storage (replace with database in production)
-let sermons = [
-  {
-    id: 1,
-    title: 'Church of Pentecost - Live Service',
-    speaker: 'The Church of Pentecost',
-    date: '2025-11-10',
-    series: 'Sunday Worship',
-    description: 'Join us for powerful worship, inspiring messages, and life-changing moments from The Church of Pentecost.',
-    videoUrl: 'https://www.youtube.com/embed/e_bbZdZk7eM',
-    thumbnail: 'Service Thumbnail 1',
-    createdAt: '2025-11-10T12:30:00Z'
-  },
-  {
-    id: 2,
-    title: 'Church of Pentecost - Worship & Word',
-    speaker: 'The Church of Pentecost',
-    date: '2025-11-03',
-    series: 'Sunday Service',
-    description: 'Experience spirit-filled worship and powerful preaching from The Church of Pentecost.',
-    videoUrl: 'https://www.youtube.com/embed/0hui8AP1_j4',
-    thumbnail: 'Service Thumbnail 2',
-    createdAt: '2025-11-03T12:30:00Z'
-  },
-  {
-    id: 3,
-    title: 'Church of Pentecost - Live Broadcast',
-    speaker: 'The Church of Pentecost',
-    date: '2025-10-27',
-    series: 'Special Service',
-    description: 'Join believers worldwide for this special service from The Church of Pentecost.',
-    videoUrl: 'https://www.youtube.com/embed/wT60VvXIU44',
-    thumbnail: 'Service Thumbnail 3',
-    createdAt: '2025-10-27T12:30:00Z'
-  },
-  {
-    id: 4,
-    title: 'Church of Pentecost - Sunday Service',
-    speaker: 'The Church of Pentecost',
-    date: '2025-10-20',
-    series: 'Sunday Worship',
-    description: 'Powerful ministry and worship from The Church of Pentecost headquarters.',
-    videoUrl: 'https://www.youtube.com/embed/gvcRQWNAsdc',
-    thumbnail: 'Service Thumbnail 4',
-    createdAt: '2025-10-20T12:30:00Z'
-  }
-];
+// File path for persistent storage
+const sermonsDataPath = path.join(__dirname, '../data/sermons.json');
 
-let sermonIdCounter = 5;
+// Helper function to read sermons from file
+const readSermons = () => {
+  try {
+    // Ensure data directory exists
+    const dataDir = path.dirname(sermonsDataPath);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    // If file doesn't exist, create it with empty data
+    if (!fs.existsSync(sermonsDataPath)) {
+      const initialData = {
+        sermons: [],
+        nextId: 1
+      };
+      fs.writeFileSync(sermonsDataPath, JSON.stringify(initialData, null, 2));
+      return initialData;
+    }
+    const data = fs.readFileSync(sermonsDataPath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading sermons:', error);
+    return { sermons: [], nextId: 1 };
+  }
+};
+
+// Helper function to write sermons to file
+const writeSermons = (data) => {
+  try {
+    fs.writeFileSync(sermonsDataPath, JSON.stringify(data, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error('Error writing sermons:', error);
+    return false;
+  }
+};
 
 // Get all sermons
 router.get('/', (req, res) => {
   try {
-    const sortedSermons = [...sermons].sort(
+    const sermonsData = readSermons();
+    const sortedSermons = [...sermonsData.sermons].sort(
       (a, b) => new Date(b.date) - new Date(a.date)
     );
     res.json(sortedSermons);
@@ -69,7 +62,8 @@ router.get('/', (req, res) => {
 // Get single sermon
 router.get('/:id', (req, res) => {
   try {
-    const sermon = sermons.find(s => s.id === parseInt(req.params.id));
+    const sermonsData = readSermons();
+    const sermon = sermonsData.sermons.find(s => s.id === parseInt(req.params.id));
     
     if (!sermon) {
       return res.status(404).json({ error: 'Sermon not found' });
@@ -91,8 +85,10 @@ router.post('/', authMiddleware, (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    const sermonsData = readSermons();
+
     const newSermon = {
-      id: sermonIdCounter++,
+      id: sermonsData.nextId++,
       title,
       speaker,
       date,
@@ -103,7 +99,8 @@ router.post('/', authMiddleware, (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    sermons.push(newSermon);
+    sermonsData.sermons.push(newSermon);
+    writeSermons(sermonsData);
     res.status(201).json(newSermon);
   } catch (error) {
     console.error('Error creating sermon:', error);
@@ -115,19 +112,21 @@ router.post('/', authMiddleware, (req, res) => {
 router.put('/:id', authMiddleware, (req, res) => {
   try {
     const { id } = req.params;
-    const index = sermons.findIndex(s => s.id === parseInt(id));
+    const sermonsData = readSermons();
+    const index = sermonsData.sermons.findIndex(s => s.id === parseInt(id));
 
     if (index === -1) {
       return res.status(404).json({ error: 'Sermon not found' });
     }
 
-    sermons[index] = {
-      ...sermons[index],
+    sermonsData.sermons[index] = {
+      ...sermonsData.sermons[index],
       ...req.body,
       id: parseInt(id)
     };
 
-    res.json(sermons[index]);
+    writeSermons(sermonsData);
+    res.json(sermonsData.sermons[index]);
   } catch (error) {
     console.error('Error updating sermon:', error);
     res.status(500).json({ error: 'Failed to update sermon' });
@@ -138,13 +137,15 @@ router.put('/:id', authMiddleware, (req, res) => {
 router.delete('/:id', authMiddleware, (req, res) => {
   try {
     const { id } = req.params;
-    const index = sermons.findIndex(s => s.id === parseInt(id));
+    const sermonsData = readSermons();
+    const index = sermonsData.sermons.findIndex(s => s.id === parseInt(id));
 
     if (index === -1) {
       return res.status(404).json({ error: 'Sermon not found' });
     }
 
-    sermons.splice(index, 1);
+    sermonsData.sermons.splice(index, 1);
+    writeSermons(sermonsData);
     res.json({ message: 'Sermon deleted' });
   } catch (error) {
     console.error('Error deleting sermon:', error);
@@ -153,4 +154,3 @@ router.delete('/:id', authMiddleware, (req, res) => {
 });
 
 module.exports = router;
-
