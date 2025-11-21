@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from '../../config/axios';
 import './AdminEvents.css';
 
 const AdminEvents = () => {
@@ -11,7 +12,8 @@ const AdminEvents = () => {
     time: '',
     location: '',
     description: '',
-    category: 'general'
+    category: 'general',
+    recurrenceType: 'one-time'
   });
 
   const categories = [
@@ -29,9 +31,8 @@ const AdminEvents = () => {
 
   const fetchEvents = async () => {
     try {
-      const response = await fetch('/api/events');
-      const data = await response.json();
-      setEvents(Array.isArray(data) ? data : []);
+      const response = await axios.get('/api/events');
+      setEvents(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching events:', error);
       setEvents([]);
@@ -47,24 +48,17 @@ const AdminEvents = () => {
     e.preventDefault();
     
     try {
-      const token = localStorage.getItem('token');
       const url = editingEvent ? `/api/events/${editingEvent.id}` : '/api/events';
-      const method = editingEvent ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (response.ok) {
-        fetchEvents();
-        resetForm();
-        alert(editingEvent ? 'Event updated!' : 'Event created!');
+      
+      if (editingEvent) {
+        await axios.put(url, formData);
+      } else {
+        await axios.post(url, formData);
       }
+      
+      fetchEvents();
+      resetForm();
+      alert(editingEvent ? 'Event updated!' : 'Event created!');
     } catch (error) {
       console.error('Error saving event:', error);
       alert('Error saving event');
@@ -79,7 +73,8 @@ const AdminEvents = () => {
       time: event.time,
       location: event.location,
       description: event.description,
-      category: event.category
+      category: event.category,
+      recurrenceType: event.recurrenceType || 'one-time'
     });
     setShowForm(true);
   };
@@ -88,18 +83,9 @@ const AdminEvents = () => {
     if (!window.confirm('Are you sure you want to delete this event?')) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/events/${eventId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        fetchEvents();
-        alert('Event deleted!');
-      }
+      await axios.delete(`/api/events/${eventId}`);
+      fetchEvents();
+      alert('Event deleted!');
     } catch (error) {
       console.error('Error deleting event:', error);
       alert('Error deleting event');
@@ -113,7 +99,8 @@ const AdminEvents = () => {
       time: '',
       location: '',
       description: '',
-      category: 'general'
+      category: 'general',
+      recurrenceType: 'one-time'
     });
     setEditingEvent(null);
     setShowForm(false);
@@ -190,6 +177,25 @@ const AdminEvents = () => {
             </div>
 
             <div className="form-group">
+              <label>Event Type *</label>
+              <select 
+                name="recurrenceType" 
+                value={formData.recurrenceType} 
+                onChange={handleChange} 
+                required
+              >
+                <option value="one-time">One-Time Event</option>
+                <option value="recurring">Recurring Event</option>
+                <option value="occasional">Occasional Event</option>
+              </select>
+              <small style={{ display: 'block', marginTop: '5px', color: '#666' }}>
+                {formData.recurrenceType === 'recurring' && 'Event happens regularly (e.g., every Sunday)'}
+                {formData.recurrenceType === 'one-time' && 'Single occurrence event'}
+                {formData.recurrenceType === 'occasional' && 'Event happens occasionally (e.g., quarterly)'}
+              </small>
+            </div>
+
+            <div className="form-group">
               <label>Description *</label>
               <textarea
                 name="description"
@@ -231,6 +237,21 @@ const AdminEvents = () => {
                   <p><strong>📅 Date:</strong> {new Date(event.date).toLocaleDateString()}</p>
                   <p><strong>🕐 Time:</strong> {event.time}</p>
                   <p><strong>📍 Location:</strong> {event.location}</p>
+                  <p><strong>Type:</strong> 
+                    <span style={{ 
+                      marginLeft: '8px', 
+                      padding: '4px 8px', 
+                      borderRadius: '4px',
+                      fontSize: '0.85em',
+                      background: event.recurrenceType === 'recurring' ? '#e3f2fd' : 
+                                  event.recurrenceType === 'occasional' ? '#fff3e0' : '#f3e5f5',
+                      color: event.recurrenceType === 'recurring' ? '#1976d2' : 
+                             event.recurrenceType === 'occasional' ? '#f57c00' : '#7b1fa2'
+                    }}>
+                      {event.recurrenceType === 'recurring' ? '🔄 Recurring' : 
+                       event.recurrenceType === 'occasional' ? '📅 Occasional' : '📌 One-Time'}
+                    </span>
+                  </p>
                   <p><strong>Description:</strong> {event.description}</p>
                 </div>
                 <div className="event-actions">
