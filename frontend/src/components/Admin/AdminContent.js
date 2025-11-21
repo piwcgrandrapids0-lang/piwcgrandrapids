@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from '../../config/axios';
 import './AdminContent.css';
 
 const AdminContent = () => {
@@ -15,9 +16,8 @@ const AdminContent = () => {
 
   const fetchContent = async () => {
     try {
-      const response = await fetch('/api/content');
-      const data = await response.json();
-      setContent(data);
+      const response = await axios.get('/api/content');
+      setContent(response.data);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching content:', error);
@@ -111,18 +111,17 @@ const AdminContent = () => {
     formData.append('uploadType', 'images'); // Always use 'images' directory
     
     try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
+      const response = await axios.post('/api/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
       
-      const data = await response.json();
-      
-      if (data.success) {
+      if (response.data.success) {
         alert(`Image uploaded successfully!`);
-        return data.url;
+        return response.data.url;
       } else {
-        alert(`Upload failed: ${data.error}`);
+        alert(`Upload failed: ${response.data.error}`);
         return null;
       }
     } catch (error) {
@@ -139,22 +138,9 @@ const AdminContent = () => {
     setSaveStatus('⏳ Saving...');
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/content/${section}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(content[section])
-      });
-
-      if (response.ok) {
-        setSaveStatus('Saved successfully!');
-        setTimeout(() => setSaveStatus(''), 3000);
-      } else {
-        setSaveStatus('Error saving content');
-      }
+      await axios.put(`/api/content/${section}`, content[section]);
+      setSaveStatus('Saved successfully!');
+      setTimeout(() => setSaveStatus(''), 3000);
     } catch (error) {
       console.error('Save error:', error);
       setSaveStatus('Error saving content');
@@ -794,7 +780,7 @@ const AdminContent = () => {
               <div className="form-group">
                 <label>Mission Statement</label>
                 <textarea
-                  value={content.about.mission}
+                  value={content.about.mission || ''}
                   onChange={(e) => handleChange('about', 'mission', e.target.value)}
                   rows="3"
                 />
@@ -802,7 +788,7 @@ const AdminContent = () => {
               <div className="form-group">
                 <label>Vision Statement</label>
                 <textarea
-                  value={content.about.vision}
+                  value={content.about.vision || ''}
                   onChange={(e) => handleChange('about', 'vision', e.target.value)}
                   rows="3"
                 />
@@ -810,7 +796,7 @@ const AdminContent = () => {
               <div className="form-group">
                 <label>About Description</label>
                 <textarea
-                  value={content.about.description}
+                  value={content.about.description || ''}
                   onChange={(e) => handleChange('about', 'description', e.target.value)}
                   rows="4"
                 />
@@ -927,29 +913,71 @@ const AdminContent = () => {
                 </div>
               </div>
 
-              <h4>Core Values</h4>
-              {content.missionVision.values.map((value, index) => (
-                <div key={index} className="array-item">
-                  <h5>Value {index + 1}</h5>
-                  <div className="form-group">
-                    <label>Title</label>
-                    <input
-                      type="text"
-                      value={value.title}
-                      onChange={(e) => handleArrayItemChange('missionVision', 'values', index, 'title', e.target.value)}
-                    />
+              <div className="section-group" style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '2px solid #e0e0e0' }}>
+                <h4>Core Values</h4>
+                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                  Add, edit, or remove core values. Each value has a title and description.
+                </p>
+                
+                {(content.missionVision.values || []).map((value, index) => (
+                  <div key={index} style={{ 
+                    border: '1px solid #ddd', 
+                    padding: '1rem', 
+                    marginBottom: '1rem', 
+                    borderRadius: '8px',
+                    backgroundColor: '#f9f9f9'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <strong>Value #{index + 1}</strong>
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Are you sure you want to delete this core value?')) {
+                            handleDeleteArrayItem('missionVision', 'values', index);
+                          }
+                        }}
+                        className="btn btn-danger btn-small"
+                        style={{ padding: '0.3rem 0.8rem', fontSize: '0.85rem' }}
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                    <div className="form-group">
+                      <label>Title</label>
+                      <input
+                        type="text"
+                        value={value.title || ''}
+                        onChange={(e) => handleArrayItemChange('missionVision', 'values', index, 'title', e.target.value)}
+                        placeholder="EVANGELISM"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Description</label>
+                      <textarea
+                        value={value.description || ''}
+                        onChange={(e) => handleArrayItemChange('missionVision', 'values', index, 'description', e.target.value)}
+                        rows="6"
+                        placeholder="Enter the full description of this core value..."
+                        style={{ minHeight: '120px' }}
+                      />
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label>Description</label>
-                    <textarea
-                      value={value.description}
-                      onChange={(e) => handleArrayItemChange('missionVision', 'values', index, 'description', e.target.value)}
-                      rows="2"
-                    />
-                  </div>
-                </div>
-              ))}
-              <button onClick={() => handleSave('missionVision')} className="btn btn-gold" disabled={saving}>
+                ))}
+
+                <button
+                  onClick={() => {
+                    handleAddArrayItem('missionVision', 'values', {
+                      title: '',
+                      description: ''
+                    });
+                  }}
+                  className="btn btn-primary btn-small"
+                  style={{ marginTop: '0.5rem' }}
+                >
+                  ➕ Add Core Value
+                </button>
+              </div>
+              
+              <button onClick={() => handleSave('missionVision')} className="btn btn-gold" disabled={saving} style={{ marginTop: '1.5rem' }}>
                 {saving ? '⏳ Saving...' : '💾 Save Changes'}
               </button>
             </div>
@@ -1148,39 +1176,119 @@ const AdminContent = () => {
               </div>
 
               <h4>Ministry List</h4>
-              {content.ministries.list.map((ministry, index) => (
-                <div key={index} className="array-item">
-                  <h5>{ministry.icon} Ministry {index + 1}</h5>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Icon (emoji)</label>
-                      <input
-                        type="text"
-                        value={ministry.icon}
-                        onChange={(e) => handleArrayItemChange('ministries', 'list', index, 'icon', e.target.value)}
-                        maxLength="2"
-                      />
-                    </div>
-                    <div className="form-group" style={{flex: 2}}>
-                      <label>Name</label>
-                      <input
-                        type="text"
-                        value={ministry.name}
-                        onChange={(e) => handleArrayItemChange('ministries', 'list', index, 'name', e.target.value)}
-                      />
-                    </div>
+              <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                Add, edit, or remove ministries. Each ministry has a name and description.
+              </p>
+              
+              {(content.ministries.list || []).map((ministry, index) => (
+                <div key={index} style={{ 
+                  border: '1px solid #ddd', 
+                  padding: '1rem', 
+                  marginBottom: '1rem', 
+                  borderRadius: '8px',
+                  backgroundColor: '#f9f9f9'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <strong>Ministry #{index + 1}</strong>
+                    <button
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to delete this ministry?')) {
+                          handleDeleteArrayItem('ministries', 'list', index);
+                        }
+                      }}
+                      className="btn btn-danger btn-small"
+                      style={{ padding: '0.3rem 0.8rem', fontSize: '0.85rem' }}
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                  <div className="form-group">
+                    <label>Name</label>
+                    <input
+                      type="text"
+                      value={ministry.name || ''}
+                      onChange={(e) => handleArrayItemChange('ministries', 'list', index, 'name', e.target.value)}
+                      placeholder="PIWC Kids"
+                    />
                   </div>
                   <div className="form-group">
                     <label>Description</label>
                     <textarea
-                      value={ministry.description}
+                      value={ministry.description || ''}
                       onChange={(e) => handleArrayItemChange('ministries', 'list', index, 'description', e.target.value)}
-                      rows="3"
+                      rows="4"
+                      placeholder="Enter ministry description..."
                     />
+                  </div>
+                  <div className="form-group">
+                    <label>Image URL</label>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+                      <input
+                        type="text"
+                        value={ministry.imageUrl || ''}
+                        onChange={(e) => handleArrayItemChange('ministries', 'list', index, 'imageUrl', e.target.value)}
+                        placeholder="/uploads/images/ministry-photo.jpg"
+                        style={{ flex: 1 }}
+                      />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        id={`ministry-image-${index}`}
+                        onChange={async (e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            const url = await handleFileUpload(file);
+                            if (url) {
+                              handleArrayItemChange('ministries', 'list', index, 'imageUrl', url);
+                            }
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor={`ministry-image-${index}`}
+                        className="btn btn-secondary btn-small"
+                        style={{ 
+                          padding: '0.5rem 1rem',
+                          cursor: 'pointer',
+                          marginBottom: 0
+                        }}
+                      >
+                        {uploading ? '⏳ Uploading...' : '📤 Upload Image'}
+                      </label>
+                    </div>
+                    <small>Upload an image or enter an image URL. Images are stored in Azure Blob Storage.</small>
+                    {ministry.imageUrl && (
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <img 
+                          src={ministry.imageUrl.startsWith('http') ? ministry.imageUrl : `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}${ministry.imageUrl}`}
+                          alt="Preview"
+                          style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'cover', borderRadius: '4px' }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
-              <button onClick={() => handleSave('ministries')} className="btn btn-gold" disabled={saving}>
+
+              <button
+                onClick={() => {
+                  handleAddArrayItem('ministries', 'list', {
+                    name: '',
+                    description: '',
+                    imageUrl: ''
+                  });
+                }}
+                className="btn btn-primary btn-small"
+                style={{ marginTop: '0.5rem' }}
+              >
+                ➕ Add Ministry
+              </button>
+              
+              <button onClick={() => handleSave('ministries')} className="btn btn-gold" disabled={saving} style={{ marginTop: '1.5rem' }}>
                 {saving ? '⏳ Saving...' : '💾 Save Changes'}
               </button>
             </div>
