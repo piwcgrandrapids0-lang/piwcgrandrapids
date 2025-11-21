@@ -122,10 +122,29 @@ az storage container create \
   --public-access blob
 ```
 
-### 3. Create App Service Plan (for backend)
+### 3. Register Microsoft.Web Provider (Required First Time)
 
 ```bash
-# Create App Service Plan (B1 tier - $13/month)
+# Register the Microsoft.Web provider (required for App Service)
+az provider register --namespace Microsoft.Web
+
+# Check registration status
+az provider show -n Microsoft.Web --query "registrationState" -o tsv
+# Wait until it shows "Registered" (may take 1-2 minutes)
+```
+
+**⚠️ Important:** If you're on a Free Trial subscription, you'll need to:
+1. Upgrade to Pay-As-You-Go subscription (free, just requires payment method)
+2. Request quota increase for App Service Plans via Azure Portal:
+   - Go to Help + Support → Create support request
+   - Issue type: Service and subscription limits (quotas)
+   - Quota type: Function or Web App (Windows and Linux)
+   - Request 1-2 instances for Free or Basic tier
+
+### 4. Create App Service Plan (for backend)
+
+```bash
+# Create App Service Plan (B1 tier - $13/month, recommended for production)
 az appservice plan create \
   --name piwc-backend-plan \
   --resource-group piwc-grandrapids-rg \
@@ -133,7 +152,7 @@ az appservice plan create \
   --sku B1 \
   --is-linux
 
-# For free tier (with limitations):
+# For free tier (with limitations - 60 min/day CPU limit):
 # az appservice plan create \
 #   --name piwc-backend-plan \
 #   --resource-group piwc-grandrapids-rg \
@@ -143,28 +162,44 @@ az appservice plan create \
 ```
 
 **Pricing Tiers:**
-- `F1` - Free (1GB RAM, 60 min/day CPU, good for testing)
-- `B1` - Basic ($13/month, 1.75GB RAM, always-on)
+- `F1` - Free (1GB RAM, 60 min/day CPU, **quota limits apply**)
+- `B1` - Basic ($13/month, 1.75GB RAM, always-on, **recommended**)
 - `S1` - Standard ($70/month, 1.75GB RAM, auto-scale)
 
-### 4. Create Web App (backend)
+### 5. Create Web App (backend)
 
 ```bash
-# Create Web App for backend API
+# Create Web App for backend API (Node.js 20 LTS - latest available)
 az webapp create \
   --resource-group piwc-grandrapids-rg \
   --plan piwc-backend-plan \
   --name piwcgr-api \
-  --runtime "NODE:18-lts"
+  --runtime "NODE:20-lts"
 
 # Enable HTTPS only
 az webapp update \
   --resource-group piwc-grandrapids-rg \
   --name piwcgr-api \
   --https-only true
+
+# Enable Always On (prevents cold starts, requires B1 or higher tier)
+az webapp config set \
+  --resource-group piwc-grandrapids-rg \
+  --name piwcgr-api \
+  --always-on true
+
+# Configure CORS to allow frontend requests
+az webapp cors add \
+  --resource-group piwc-grandrapids-rg \
+  --name piwcgr-api \
+  --allowed-origins "https://icy-beach-06a0b2a0f.3.azurestaticapps.net"
+# Replace with your actual Static Web App URL after deployment
 ```
 
-**Note:** App name must be globally unique. If `piwcgr-api` is taken, try `piwcgr-api-2025` or similar.
+**Note:** 
+- App name must be globally unique. If `piwcgr-api` is taken, try `piwcgr-api-2025` or similar.
+- Always On requires B1 tier or higher (not available on Free tier)
+- CORS is also configured in code (see server.js), but Azure-level CORS provides additional security
 
 ---
 
@@ -172,7 +207,7 @@ az webapp update \
 
 ### Step 1: Configure Environment Variables
 
-Set all required environment variables in Azure:
+Set all required environment variables in Azure. **Get your actual values from your local `.env` file**:
 
 ```bash
 # Get your storage connection string first
@@ -182,71 +217,75 @@ STORAGE_CONN=$(az storage account show-connection-string \
   --output tsv)
 
 # Configure app settings (environment variables)
+# Replace placeholder values with your actual credentials from backend/.env
 az webapp config appsettings set \
   --resource-group piwc-grandrapids-rg \
   --name piwcgr-api \
   --settings \
     NODE_ENV=production \
     PORT=8080 \
-    JWT_SECRET="your-super-secret-jwt-key-change-this-$(openssl rand -hex 16)" \
-    GEMINI_API_KEY="your-gemini-api-key-here" \
+    JWT_SECRET="your-actual-jwt-secret-from-env-file" \
+    GEMINI_API_KEY="your-actual-gemini-api-key" \
     SMTP_SERVICE=gmail \
     SMTP_USER="piwcgrandrapids0@gmail.com" \
-    SMTP_PASS="your-gmail-app-password" \
+    SMTP_PASS="your-actual-gmail-app-password" \
     CHURCH_EMAIL="piwcgrandrapids0@gmail.com" \
     CHURCH_PHONE="(616) 123-4567" \
     AZURE_STORAGE_CONNECTION_STRING="$STORAGE_CONN" \
-    AZURE_STORAGE_CONTAINER_NAME="church-images" \
-    WEBSITE_NODE_DEFAULT_VERSION="~18"
+    AZURE_STORAGE_CONTAINER_NAME="church-images"
+
+# Verify environment variables were set
+az webapp config appsettings list \
+  --resource-group piwc-grandrapids-rg \
+  --name piwcgr-api \
+  --output table
 ```
 
-**🔐 Security:** Replace placeholder values with your actual credentials!
+**🔐 Security Notes:**
+- Replace all placeholder values with your actual credentials from `backend/.env`
+- Never commit `.env` file to git (it's in `.gitignore`)
+- Use `env.example.txt` as a template for your local `.env` file
+- JWT_SECRET should be a strong random string (use `openssl rand -hex 32`)
+- SMTP_PASS should be a Gmail App Password (16 characters, not your regular password)
 
 ### Step 2: Deploy Backend Code
 
-**Option A: Deploy from Local Git**
+**Recommended: Deploy via ZIP (az webapp deploy)**
 
 ```bash
 # Navigate to backend directory
 cd backend
 
-# Initialize git if not already done
-git init
+# Create deployment package (exclude unnecessary files)
+zip -r backend-deploy.zip . \
+  -x "*.git*" \
+  -x "*.env" \
+  -x "node_modules/*" \
+  -x "uploads/*" \
+  -x "*.DS_Store" \
+  -x "backend-deploy.zip"
 
-# Configure deployment user (one-time setup)
-az webapp deployment user set \
-  --user-name piwcgr-deployer \
-  --password "YourSecurePassword123!"
-
-# Get git deployment URL
-az webapp deployment source config-local-git \
-  --name piwcgr-api \
+# Deploy to Azure (modern method)
+az webapp deploy \
   --resource-group piwc-grandrapids-rg \
-  --query url \
-  --output tsv
+  --name piwcgr-api \
+  --src-path backend-deploy.zip \
+  --type zip
 
-# Add Azure as git remote
-git remote add azure <deployment-url-from-above>
-
-# Deploy
-git add .
-git commit -m "Initial backend deployment"
-git push azure main
+# Clean up
+rm backend-deploy.zip
 ```
 
-**Option B: Deploy via ZIP**
+**Alternative: Deploy via Legacy ZIP Method**
 
 ```bash
 # Navigate to backend directory
 cd backend
 
-# Install production dependencies
-npm install --production
-
 # Create deployment package
-zip -r backend.zip . -x "*.git*" "node_modules/*" ".env"
+zip -r backend.zip . -x "*.git*" "node_modules/*" ".env" "uploads/*"
 
-# Deploy to Azure
+# Deploy to Azure (legacy method - deprecated)
 az webapp deployment source config-zip \
   --resource-group piwc-grandrapids-rg \
   --name piwcgr-api \
@@ -255,6 +294,12 @@ az webapp deployment source config-zip \
 # Clean up
 rm backend.zip
 ```
+
+**Note:** 
+- The `az webapp deploy` command is the recommended modern method
+- Exclude `.env` file from deployment (environment variables are set via Azure App Settings)
+- Exclude `node_modules` (Azure will install dependencies automatically)
+- Exclude `uploads` folder (use Azure Blob Storage for production)
 
 ### Step 3: Verify Backend Deployment
 
@@ -273,10 +318,15 @@ curl https://piwcgr-api.azurewebsites.net/api/health
 **Expected Response:**
 ```json
 {
-  "status": "healthy",
-  "timestamp": "2025-11-11T..."
+  "status": "OK",
+  "message": "Server is running"
 }
 ```
+
+**Troubleshooting:**
+- If you get 503/504 errors, check if Always On is enabled (requires B1+ tier)
+- If you get CORS errors, verify CORS is configured in both Azure and server.js
+- Check logs: `az webapp log tail --resource-group piwc-grandrapids-rg --name piwcgr-api`
 
 ---
 
@@ -309,28 +359,93 @@ az staticwebapp create \
   --location eastus2 \
   --sku Free
 
-# Get deployment token for CI/CD
-az staticwebapp secrets list \
+# Get deployment token for CLI deployment
+DEPLOYMENT_TOKEN=$(az staticwebapp secrets list \
   --name piwcgr-website \
   --resource-group piwc-grandrapids-rg \
   --query "properties.apiKey" \
-  --output tsv
+  --output tsv)
+
+echo "Deployment Token: $DEPLOYMENT_TOKEN"
+echo ""
+echo "⚠️  IMPORTANT: Save this token securely!"
+echo "   This token is STATIC and does NOT change automatically."
+echo "   You'll need it for every deployment."
+echo ""
+echo "   To save it, create frontend/.env.deployment:"
+echo "   AZURE_SWA_DEPLOYMENT_TOKEN=$DEPLOYMENT_TOKEN"
+echo ""
+echo "   Or use the deployment script: frontend/deploy.sh"
 ```
 
 ### Step 3: Deploy Frontend
 
-**Option A: Deploy via Azure CLI**
+**Install Static Web Apps CLI (if not already installed)**
 
 ```bash
-# Install Static Web Apps CLI
 npm install -g @azure/static-web-apps-cli
-
-# Deploy from build folder
-cd frontend
-swa deploy ./build \
-  --deployment-token <token-from-step-2> \
-  --env production
 ```
+
+**Deploy Frontend**
+
+**Option 1: Using the Deployment Script (Recommended)**
+
+```bash
+# Navigate to frontend directory
+cd frontend
+
+# Create .env.deployment file with your token (first time only)
+# Copy .env.deployment.example to .env.deployment and add your token
+echo "AZURE_SWA_DEPLOYMENT_TOKEN=$DEPLOYMENT_TOKEN" > .env.deployment
+
+# Make deploy script executable
+chmod +x deploy.sh
+
+# Deploy (script will build and deploy automatically)
+./deploy.sh
+```
+
+**Option 2: Manual Deployment**
+
+```bash
+# Navigate to frontend directory
+cd frontend
+
+# Create production environment file
+echo "REACT_APP_API_URL=https://piwcgr-api.azurewebsites.net" > .env.production
+
+# Build production bundle
+npm run build
+
+# Deploy using SWA CLI
+# Load token from .env.deployment if it exists
+if [ -f .env.deployment ]; then
+    source .env.deployment
+    swa deploy ./build \
+      --deployment-token "$AZURE_SWA_DEPLOYMENT_TOKEN" \
+      --env production
+else
+    # Or use the token directly:
+    swa deploy ./build \
+      --deployment-token "your-token-here" \
+      --env production
+fi
+```
+
+**⚠️ Important Notes About the Deployment Token:**
+- **The token is STATIC** - it does NOT change automatically
+- **You MUST save it** after creating the Static Web App
+- **Store it securely** in `frontend/.env.deployment` (already in `.gitignore`)
+- **If you lose it**, retrieve it with:
+  ```bash
+  az staticwebapp secrets list \
+    --name piwcgr-website \
+    --resource-group piwc-grandrapids-rg \
+    --query "properties.apiKey" \
+    --output tsv
+  ```
+- The `.env.production` file configures the frontend to use your backend API URL
+- Both `.env.deployment` and `.env.production` are in `.gitignore` (already configured)
 
 **Option B: Deploy via GitHub Actions**
 
@@ -445,6 +560,34 @@ Create `frontend/.env.production`:
 REACT_APP_API_URL=https://piwcgr-api.azurewebsites.net
 REACT_APP_ENV=production
 ```
+
+**Note:** This file should be in `.gitignore` (already configured).
+
+### Local Development Environment Files
+
+**Backend `.env` File:**
+1. Copy `backend/env.example.txt` to `backend/.env`
+2. Fill in your actual values:
+   - `JWT_SECRET` - Generate with: `openssl rand -hex 32`
+   - `GEMINI_API_KEY` - Get from https://ai.google.dev/
+   - `SMTP_PASS` - Gmail App Password (16 characters)
+   - `AZURE_STORAGE_CONNECTION_STRING` - From Azure Portal
+3. **DO NOT commit** `.env` to git (it's in `.gitignore`)
+
+**Frontend `.env` File (for local development):**
+```env
+REACT_APP_API_URL=http://localhost:5001
+```
+
+**Gitignore Configuration:**
+The following files are already in `.gitignore`:
+- `backend/.env`
+- `frontend/.env`
+- `frontend/.env.production`
+- `backend/uploads/`
+- `backend/data/`
+
+**Important:** Never commit sensitive credentials to git!
 
 ---
 
@@ -583,19 +726,191 @@ az webapp config appsettings set \
 
 ---
 
+## Important Configuration Notes
+
+### Image Storage (Azure Blob Storage)
+
+**⚠️ CRITICAL: Images MUST be stored in Azure Blob Storage, NOT locally**
+
+The backend is configured to upload all images to Azure Blob Storage. In production:
+- ✅ Images are saved to Azure Blob Storage (`piwcgrimages` storage account)
+- ❌ Local storage fallback is DISABLED in production
+- ❌ Images saved locally will be LOST on redeployment
+
+**Why?** When you redeploy the backend, the local `uploads/` directory is wiped out. Only images in Azure Blob Storage persist.
+
+**Verification:**
+- Check image URLs in the gallery - they should start with `https://piwcgrimages.blob.core.windows.net/`
+- If you see URLs like `/uploads/gallery/...`, those are local paths and will be lost
+
+**If images disappear after deployment:**
+1. Check Azure Storage connection string is set: `AZURE_STORAGE_CONNECTION_STRING`
+2. Check backend logs for Azure upload errors
+3. Re-upload images through the admin panel (they'll be saved to Azure)
+
+**If images disappear after deployment:**
+1. Check Azure Storage connection string is set: `AZURE_STORAGE_CONNECTION_STRING`
+2. Check backend logs for Azure upload errors
+3. Use "Sync from Azure" button in Admin Gallery to recover images
+4. Re-upload images through the admin panel (they'll be saved to Azure)
+
+### Backend Configuration
+
+**CORS Configuration:**
+The backend has CORS configured in two places:
+1. **Azure App Service Level** (via CLI):
+   ```bash
+   az webapp cors add \
+     --resource-group piwc-grandrapids-rg \
+     --name piwcgr-api \
+     --allowed-origins "https://your-static-web-app-url.azurestaticapps.net"
+   ```
+
+2. **Code Level** (in `server.js`):
+   ```javascript
+   app.use(cors({
+     origin: [
+       'https://your-static-web-app-url.azurestaticapps.net',
+       'http://localhost:3000'
+     ],
+     credentials: true
+   }));
+   ```
+
+**Always On:**
+- Required for B1 tier or higher
+- Prevents cold starts (app stays warm)
+- Free tier doesn't support Always On
+- Enable: `az webapp config set --always-on true`
+
+**Node.js Runtime:**
+- Azure App Service supports Node.js 20 LTS (latest)
+- Node.js 18 LTS is also available
+- Set via: `--runtime "NODE:20-lts"` when creating web app
+
+### Frontend Configuration
+
+**API URL Configuration:**
+- Create `.env.production` file in `frontend/` directory
+- Set: `REACT_APP_API_URL=https://piwcgr-api.azurewebsites.net`
+- This file should be in `.gitignore`
+
+**Axios Configuration:**
+- All API calls use `src/config/axios.js`
+- Base URL is set from `REACT_APP_API_URL` environment variable
+- Automatically includes authentication tokens
+
+**Image URLs:**
+- **Uploaded images** (gallery, leadership photos): Stored in Azure Blob Storage
+  - URLs: `https://piwcgrimages.blob.core.windows.net/church-images/...`
+  - Images persist across deployments (stored in cloud)
+- **Static images**: Use relative paths: `/assets/images/...`
+- Helper functions in `Home.js` and `Leadership.js` handle URL conversion for uploaded images
+- ⚠️ **Important**: Images saved locally (`/uploads/...`) will be LOST on redeployment
+
+**Data Persistence:**
+- The `backend/data/` directory is **excluded** from deployment to preserve data on Azure
+- All data files persist between deployments:
+  - `sermons.json` - Sermons and video URLs
+  - `events.json` - Events
+  - `messages.json` - Contact messages
+  - `prayers.json` - Prayer requests
+  - `gallery.json` - Gallery metadata
+  - `content.json` - Website content
+- Images are stored in Azure Blob Storage (permanent)
+- Videos are YouTube URLs (stored in `sermons.json`)
+
+### Features Implemented
+
+**Read/Unread Messages:**
+- Messages and prayer requests can be marked as read/unread
+- Backend endpoints:
+  - `PATCH /api/contact/messages/:id/read`
+  - `PATCH /api/prayer-requests/:id/read`
+- Frontend shows visual indicators and filter buttons
+
+**Video Embedding:**
+- YouTube URLs are automatically converted to embed format
+- Supports: `youtube.com/watch?v=`, `youtu.be/`, `youtube.com/live/`, and embed URLs
+- Uses YouTube oEmbed format with `feature=oembed` parameter
+- Invalid URLs show placeholder with "Watch on YouTube" link
+- Videos are stored as URLs in `sermons.json` (not video files)
+
+**Social Media Links:**
+- Configured in `backend/data/content.json`
+- Footer and Contact page use same data source
+- Links: Facebook, YouTube, Instagram
+
+### Environment Variables
+
+**Backend `.env` File:**
+- **DO NOT commit** `.env` to git (already in `.gitignore`)
+- Use `env.example.txt` as a template
+- Copy to `.env` and fill in your actual values
+- Required variables:
+  - `JWT_SECRET` - Generate with: `openssl rand -hex 32`
+  - `GEMINI_API_KEY` - Get from https://ai.google.dev/
+  - `SMTP_PASS` - Gmail App Password (16 characters)
+  - `AZURE_STORAGE_CONNECTION_STRING` - From Azure Portal
+
+**Azure App Settings:**
+- All environment variables must be set in Azure App Service
+- Use: `az webapp config appsettings set`
+- Set `PORT=8080` (Azure default)
+- Set `NODE_ENV=production`
+
+---
+
 ## Troubleshooting
 
 ### Backend Not Starting
 
+**Check Status:**
+```bash
+az webapp show \
+  --resource-group piwc-grandrapids-rg \
+  --name piwcgr-api \
+  --query "{state:state, status:state}" \
+  --output table
+```
+
 **Check Logs:**
 ```bash
-az webapp log tail --name piwcgr-api --resource-group piwc-grandrapids-rg
+az webapp log tail \
+  --resource-group piwc-grandrapids-rg \
+  --name piwcgr-api
 ```
 
 **Common Issues:**
-- Missing environment variables → Check App Settings
-- Port mismatch → Ensure `PORT=8080` in settings
-- Dependencies not installed → Redeploy with `npm install`
+1. **Quota Exceeded (Free Tier):**
+   - Free tier has 60 min/day CPU limit
+   - Solution: Upgrade to B1 tier or wait for quota reset
+   ```bash
+   az appservice plan update \
+     --resource-group piwc-grandrapids-rg \
+     --name piwc-backend-plan \
+     --sku B1
+   ```
+
+2. **Missing environment variables:**
+   - Check: `az webapp config appsettings list --resource-group piwc-grandrapids-rg --name piwcgr-api`
+   - Ensure JWT_SECRET, GEMINI_API_KEY, SMTP credentials are set
+
+3. **Port mismatch:**
+   - Azure uses port 8080 by default
+   - Set `PORT=8080` in App Settings
+
+4. **Always On disabled (causes slow cold starts):**
+   ```bash
+   az webapp config set \
+     --resource-group piwc-grandrapids-rg \
+     --name piwcgr-api \
+     --always-on true
+   ```
+
+5. **App crashed:**
+   - Restart: `az webapp restart --resource-group piwc-grandrapids-rg --name piwcgr-api`
+   - Redeploy if needed
 
 ### Frontend 404 Errors
 
@@ -605,18 +920,44 @@ az webapp log tail --name piwcgr-api --resource-group piwc-grandrapids-rg
 
 ### CORS Errors
 
-**Update backend CORS:**
-```javascript
-// backend/server.js
-app.use(cors({
-  origin: [
-    'https://piwcgr-website.azurestaticapps.net',
-    'https://www.piwcgrandrapids.org'
-  ]
-}));
-```
+**Symptoms:** `Access-Control-Allow-Origin` errors in browser console
 
-Redeploy backend after changes.
+**Fix (Two Places):**
+
+1. **Azure App Service Level:**
+   ```bash
+   az webapp cors add \
+     --resource-group piwc-grandrapids-rg \
+     --name piwcgr-api \
+     --allowed-origins "https://your-frontend-url.azurestaticapps.net"
+   ```
+
+2. **Code Level (server.js):**
+   ```javascript
+   app.use(cors({
+     origin: [
+       'https://your-frontend-url.azurestaticapps.net',
+       'http://localhost:3000'
+     ],
+     credentials: true,
+     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+     allowedHeaders: ['Content-Type', 'Authorization']
+   }));
+   ```
+
+3. **Restart backend:**
+   ```bash
+   az webapp restart \
+     --resource-group piwc-grandrapids-rg \
+     --name piwcgr-api
+   ```
+
+**Verify CORS:**
+```bash
+az webapp cors show \
+  --resource-group piwc-grandrapids-rg \
+  --name piwcgr-api
+```
 
 ### Image Uploads Failing
 
@@ -741,5 +1082,5 @@ The PIWC Grand Rapids website is now live on Azure with:
 - ✅ HTTPS security
 - ✅ Custom domain ready
 
-**Last Updated**: November 11, 2025
+**Last Updated**: November 21, 2025
 
