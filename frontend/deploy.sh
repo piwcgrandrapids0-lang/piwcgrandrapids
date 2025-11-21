@@ -25,7 +25,7 @@ if [ -z "$AZURE_SWA_DEPLOYMENT_TOKEN" ]; then
 fi
 
 # Build the frontend
-echo "📦 Building frontend..."
+echo "Building frontend..."
 npm run build
 
 if [ $? -ne 0 ]; then
