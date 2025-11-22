@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import axios from '../config/axios';
 import './Home.css';
 
 const Home = () => {
@@ -9,9 +10,8 @@ const Home = () => {
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const response = await fetch('/api/content');
-        const data = await response.json();
-        setContent(data);
+        const response = await axios.get('/api/content');
+        setContent(response.data);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching content:', error);
@@ -25,9 +25,61 @@ const Home = () => {
   const getImageUrl = (url) => {
     if (!url) return url;
     if (url.startsWith('/uploads/')) {
-      return `http://localhost:5001${url}`;
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+      return `${API_URL}${url}`;
     }
     return url;
+  };
+
+  const getEmbedUrl = (url) => {
+    if (!url || typeof url !== 'string') return null;
+
+    url = url.trim();
+    
+    if (url === 'https://www.youtube.com/' || url === 'https://youtube.com/' || url.includes('youtube.com/@')) {
+      return null; 
+    }
+
+    if (url.includes('youtube.com/embed/')) {
+      const embedMatch = url.match(/embed\/([^?&]+)/);
+      if (embedMatch && embedMatch[1]) {
+        const videoId = embedMatch[1];
+
+        if (/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+          return `https://www.youtube.com/embed/${videoId}`;
+        }
+      }
+      return null;
+    }
+
+    let videoId = null;
+
+    const watchMatch = url.match(/(?:[?&]v=|v\/)([^&?#]+)/);
+    if (watchMatch && watchMatch[1]) {
+      videoId = watchMatch[1].split('&')[0].split('#')[0];
+    }
+    
+    if (!videoId) {
+      const liveMatch = url.match(/youtube\.com\/live\/([^?&#]+)/);
+      if (liveMatch && liveMatch[1]) {
+        videoId = liveMatch[1];
+      }
+    }
+    
+    
+    if (!videoId) {
+      const shortMatch = url.match(/youtu\.be\/([^?&#]+)/);
+      if (shortMatch && shortMatch[1]) {
+        videoId = shortMatch[1];
+      }
+    }
+    
+    
+    if (videoId && /^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+      return `https://www.youtube.com/embed/${videoId}`;
+    }
+    
+    return null;
   };
 
   if (loading) {
@@ -87,6 +139,46 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Church Theme Section */}
+      {content?.themes && Object.keys(content.themes).find(year => content.themes[year]?.active) && (
+        <section className="section theme-section" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', padding: '4rem 0' }}>
+          <div className="container">
+            {Object.keys(content.themes).map(year => {
+              const theme = content.themes[year];
+              if (!theme?.active) return null;
+              
+              return (
+                <div key={year} className="theme-card" style={{ 
+                  background: 'rgba(255, 255, 255, 0.1)', 
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  padding: '3rem',
+                  textAlign: 'center',
+                  border: '1px solid rgba(255, 255, 255, 0.2)'
+                }}>
+                  <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                    {year} Annual Theme
+                  </div>
+                  <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: 'bold' }}>
+                    {theme.title}
+                  </h2>
+                  {theme.scripture && (
+                    <p style={{ fontSize: '1.2rem', marginBottom: '1.5rem', fontStyle: 'italic', opacity: 0.95 }}>
+                      {theme.scripture}
+                    </p>
+                  )}
+                  {theme.description && (
+                    <p style={{ fontSize: '1.1rem', lineHeight: '1.8', maxWidth: '800px', margin: '0 auto', opacity: 0.9 }}>
+                      {theme.description}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Service Times Section */}
       <section className="section service-times-section">
         <div className="container">
@@ -111,6 +203,26 @@ const Home = () => {
               <p className="service-time">Every Age</p>
               <p>Programs for kids, youth, and adults - everyone has a place here</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Tenets Section */}
+      <section className="section tenets-preview-section" style={{ background: '#f8f9fa', padding: '4rem 0' }}>
+        <div className="container">
+          <div style={{ textAlign: 'center', maxWidth: '800px', margin: '0 auto' }}>
+            <h2 className="section-title">Our Tenets</h2>
+            <p className="section-subtitle" style={{ fontSize: '1.1rem', color: '#666', marginBottom: '2rem' }}>
+              The foundational beliefs and doctrines of The Church of Pentecost, USA Inc.
+            </p>
+            <p style={{ fontSize: '1rem', lineHeight: '1.8', color: '#555', marginBottom: '2rem' }}>
+              We are built upon biblical tenets that guide our faith, practice, and mission. 
+              These core beliefs form the foundation of our identity as a Pentecostal denomination 
+              and shape how we worship, serve, and live out our faith.
+            </p>
+            <Link to="/tenets" className="btn btn-primary" style={{ fontSize: '1.1rem', padding: '1rem 2.5rem' }}>
+              📖 View All Tenets
+            </Link>
           </div>
         </div>
       </section>
@@ -179,22 +291,40 @@ const Home = () => {
             <h2 className="section-title">{content?.latestMessage?.title || 'Latest Message'}</h2>
             <div className="sermon-container">
               <div className="sermon-video">
-                {content?.latestMessage?.sermon?.videoUrl ? (
+                {getEmbedUrl(content?.latestMessage?.sermon?.videoUrl) ? (
                   <iframe
                     width="100%"
                     height="100%"
-                    src={content.latestMessage.sermon.videoUrl.replace('youtu.be/', 'www.youtube.com/embed/').replace('watch?v=', 'embed/').split('?')[0]}
+                    src={`${getEmbedUrl(content.latestMessage.sermon.videoUrl)}?feature=oembed&rel=0&modestbranding=1`}
                     title={content.latestMessage.sermon.title}
                     frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
+                    referrerPolicy="strict-origin-when-cross-origin"
                     style={{ borderRadius: '8px' }}
                   ></iframe>
-                ) : (
-                  <div className="placeholder-video">
-                    <span>{content?.latestMessage?.subtitle || 'Latest Sermon Video'}</span>
+                ) : null}
+                <div className="placeholder-video" style={{ display: getEmbedUrl(content?.latestMessage?.sermon?.videoUrl) ? 'none' : 'flex' }}>
+                  <div style={{ textAlign: 'center', padding: '2rem' }}>
+                    <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>⚠️ Video Not Available</p>
+                    <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                      {content?.latestMessage?.sermon?.videoUrl ? 
+                        'This video may be private, unavailable, or embedding may be disabled.' : 
+                        'No video URL provided.'}
+                    </p>
+                    {content?.latestMessage?.sermon?.videoUrl && (
+                      <a 
+                        href={content.latestMessage.sermon.videoUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="btn btn-primary"
+                        style={{ display: 'inline-block' }}
+                      >
+                        Watch on YouTube
+                      </a>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
               <div className="sermon-info">
                 <h3>{content?.latestMessage?.sermon?.category || 'Sunday Service'}</h3>
