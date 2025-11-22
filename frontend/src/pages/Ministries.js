@@ -1,145 +1,54 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from '../config/axios';
 import './Ministries.css';
 
 const Ministries = () => {
-  const ministries = [
-    {
-      id: 1,
-      name: 'PIWC Kids',
-      icon: '👶',
-      description: 'A fun, safe, and engaging environment where children learn about Jesus through age-appropriate lessons, games, and activities.',
-      ageGroup: 'Ages 0-12',
-      meeting: 'Sundays during service',
-      leader: 'Sister Abigail Frimpong',
-      highlights: [
-        'Nursery (0-2 years)',
-        'Preschool (3-5 years)',
-        'Elementary (6-12 years)',
-        'Bible stories and worship',
-        'Games and crafts',
-        'Safe, loving environment'
-      ]
-    },
-    {
-      id: 2,
-      name: 'Youth Ministry',
-      icon: '🎸',
-      description: 'Empowering the next generation to live out their faith boldly through worship, discipleship, and community.',
-      ageGroup: 'Ages 13-18',
-      meeting: 'Sundays & Youth Nights',
-      leader: 'Brother Emmanuel Addo',
-      highlights: [
-        'Weekly youth services',
-        'Bible studies',
-        'Youth events and outings',
-        'Leadership development',
-        'Community service',
-        'Mentorship programs'
-      ]
-    },
-    {
-      id: 3,
-      name: "Men's Ministry",
-      icon: '👨',
-      description: 'Building strong, godly men through fellowship, accountability, and spiritual growth.',
-      ageGroup: 'Adult Men',
-      meeting: 'Monthly meetings',
-      leader: 'Elder Samuel Boateng',
-      highlights: [
-        'Brotherhood and fellowship',
-        'Bible study and prayer',
-        'Accountability groups',
-        'Leadership training',
-        'Service projects',
-        'Annual men\'s retreat'
-      ]
-    },
-    {
-      id: 4,
-      name: "Women's Ministry",
-      icon: '👩',
-      description: 'Connecting women in faith, friendship, and spiritual growth through fellowship and service.',
-      ageGroup: 'Adult Women',
-      meeting: 'Monthly meetings',
-      leader: 'Mrs. Grace Mensah',
-      highlights: [
-        'Women\'s fellowship',
-        'Bible studies',
-        'Prayer meetings',
-        'Mentorship programs',
-        'Community outreach',
-        'Women\'s conference'
-      ]
-    },
-    {
-      id: 5,
-      name: 'Worship Team',
-      icon: '🎵',
-      description: 'Leading the congregation in Spirit-filled worship through music and song.',
-      ageGroup: 'All ages',
-      meeting: 'Weekly rehearsals',
-      leader: 'Worship Director',
-      highlights: [
-        'Choir ministry',
-        'Instrumentalists',
-        'Praise and worship',
-        'Special music',
-        'Training opportunities',
-        'Auditions open'
-      ]
-    },
-    {
-      id: 6,
-      name: 'Ushering Ministry',
-      icon: '🤝',
-      description: 'Serving as the first point of contact, welcoming and assisting guests and members.',
-      ageGroup: 'All ages',
-      meeting: 'Sundays',
-      leader: 'Head Usher',
-      highlights: [
-        'Guest reception',
-        'Seating assistance',
-        'Offering collection',
-        'Information services',
-        'Safety and security',
-        'Hospitality training'
-      ]
-    },
-    {
-      id: 7,
-      name: 'Intercessory Prayer',
-      icon: '🙏',
-      description: 'Standing in the gap through fervent prayer for the church, community, and world.',
-      ageGroup: 'All ages',
-      meeting: 'Weekly prayer meetings',
-      leader: 'Prayer Coordinator',
-      highlights: [
-        'Corporate prayer',
-        'Prayer chains',
-        'Fasting and prayer',
-        'Prayer requests',
-        'Early morning prayers',
-        'Special prayer events'
-      ]
-    },
-    {
-      id: 8,
-      name: 'Outreach & Missions',
-      icon: '🌍',
-      description: 'Sharing the Gospel and serving our community through evangelism and compassionate action.',
-      ageGroup: 'All ages',
-      meeting: 'Monthly outreach',
-      leader: 'Missions Team',
-      highlights: [
-        'Community evangelism',
-        'Food pantry support',
-        'Hospital visits',
-        'Prison ministry',
-        'Global missions support',
-        'Short-term mission trips'
-      ]
+  const [content, setContent] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchContent();
+  }, []);
+
+  const fetchContent = async () => {
+    try {
+      const response = await axios.get('/api/content');
+      setContent(response.data.ministries);
+    } catch (error) {
+      console.error('Error fetching ministries:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  // Helper function to get image URL
+  const getImageUrl = (imageUrl) => {
+    if (!imageUrl) return null;
+    // If it's already a full URL (starts with http), return as is
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
+    }
+    // If it's an Azure Blob Storage URL, return as is
+    if (imageUrl.includes('blob.core.windows.net')) {
+      return imageUrl;
+    }
+    // Otherwise, prepend the API URL for local uploads
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+    return `${apiUrl}${imageUrl}`;
+  };
+
+  if (loading) {
+    return (
+      <div className="ministries-page">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading ministries...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const ministries = content?.list || [];
 
   return (
     <div className="ministries-page">
@@ -156,52 +65,63 @@ const Ministries = () => {
         <div className="container">
           <div className="ministries-intro">
             <h2>Discover Your Ministry</h2>
-            <p>
-              At PIWC Grand Rapids, we believe that every member is called to serve. God has 
-              uniquely gifted you to make a difference in His kingdom. Whether you're passionate 
-              about working with children, leading worship, serving the community, or praying for 
-              others, there's a place for you to use your gifts and talents.
-            </p>
-            <p>
-              Browse our ministries below and find where you can plug in and make an impact!
-            </p>
+            {content?.intro ? (
+              <p>{content.intro}</p>
+            ) : (
+              <>
+                <p>
+                  At PIWC Grand Rapids, we believe that every member is called to serve. God has 
+                  uniquely gifted you to make a difference in His kingdom. Whether you're passionate 
+                  about working with children, leading worship, serving the community, or praying for 
+                  others, there's a place for you to use your gifts and talents.
+                </p>
+                <p>
+                  Browse our ministries below and find where you can plug in and make an impact!
+                </p>
+              </>
+            )}
           </div>
         </div>
       </section>
 
       <section className="section ministries-section">
         <div className="container">
-          {ministries.map((ministry, index) => (
-            <div key={ministry.id} className={`ministry-detailed ${index % 2 === 1 ? 'reverse' : ''}`}>
-              <div className="ministry-info">
-                <div className="ministry-header">
-                  <div className="ministry-icon-large">{ministry.icon}</div>
-                  <div>
-                    <h2>{ministry.name}</h2>
-                    <div className="ministry-meta">
-                      <span><strong>Age Group:</strong> {ministry.ageGroup}</span>
-                      <span><strong>Meeting:</strong> {ministry.meeting}</span>
-                      <span><strong>Leader:</strong> {ministry.leader}</span>
+          {ministries.length > 0 ? (
+            ministries.map((ministry, index) => (
+              <div key={index} className={`ministry-detailed ${index % 2 === 1 ? 'reverse' : ''}`}>
+                <div className="ministry-info">
+                  <div className="ministry-header">
+                    <div>
+                      <h2>{ministry.name}</h2>
                     </div>
                   </div>
+                  <p className="ministry-description">{ministry.description}</p>
                 </div>
-                <p className="ministry-description">{ministry.description}</p>
-                <div className="ministry-highlights">
-                  <h3>What We Do:</h3>
-                  <ul>
-                    {ministry.highlights.map((highlight, i) => (
-                      <li key={i}>{highlight}</li>
-                    ))}
-                  </ul>
+                <div className="ministry-image">
+                  {ministry.imageUrl ? (
+                    <img 
+                      src={getImageUrl(ministry.imageUrl)} 
+                      alt={ministry.name}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className="placeholder-ministry-image"
+                    style={{ display: ministry.imageUrl ? 'none' : 'flex' }}
+                  >
+                    <span>{ministry.name} Photo</span>
+                  </div>
                 </div>
               </div>
-              <div className="ministry-image">
-                <div className="placeholder-ministry-image">
-                  <span>{ministry.name} Photo</span>
-                </div>
-              </div>
+            ))
+          ) : (
+            <div className="no-ministries">
+              <p>No ministries available at the moment. Check back soon!</p>
             </div>
-          ))}
+          )}
         </div>
       </section>
 
