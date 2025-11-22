@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import axios from '../../config/axios';
 import './Navbar.css';
 import defaultLogo from '../../assets/images/church-logo.png';
 
@@ -20,10 +21,9 @@ const Navbar = () => {
   useEffect(() => {
     const fetchBranding = async () => {
       try {
-        const response = await fetch('/api/content');
-        const data = await response.json();
-        if (data.branding) {
-          setBranding(data.branding);
+        const response = await axios.get('/api/content');
+        if (response.data.branding) {
+          setBranding(response.data.branding);
         }
       } catch (error) {
         console.error('Error fetching branding:', error);
@@ -146,7 +146,7 @@ const Navbar = () => {
             )}
           </button>
           
-          {isAuthenticated && (
+          {isAuthenticated && location.pathname !== '/admin' && (
             <button onClick={logout} className="btn btn-secondary navbar-btn">
               Logout
             </button>
