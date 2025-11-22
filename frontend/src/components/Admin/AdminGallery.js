@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from '../../config/axios';
 import './AdminGallery.css';
 
 const AdminGallery = () => {
@@ -30,10 +31,9 @@ const AdminGallery = () => {
 
   const fetchImages = async () => {
     try {
-      const response = await fetch('/api/gallery');
-      const data = await response.json();
+      const response = await axios.get('/api/gallery');
       // Ensure data is an array
-      setImages(Array.isArray(data) ? data : []);
+      setImages(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching images:', error);
       setImages([]); // Set empty array on error
@@ -104,34 +104,26 @@ const AdminGallery = () => {
     formData.append('image', uploadForm.imageFile);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/gallery', {
-        method: 'POST',
+      const response = await axios.post('/api/gallery', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
-      if (response.ok) {
-        setUploadStatus('Image uploaded successfully!');
-        setUploadForm({
-          title: '',
-          category: 'sunday-service',
-          date: '',
-          description: '',
-          imageFile: null
-        });
-        setImagePreview(null);
-        fetchImages();
-        setTimeout(() => setUploadStatus(''), 3000);
-      } else {
-        const error = await response.json();
-        setUploadStatus(`Error: ${error.error || 'Upload failed'}`);
-      }
+      setUploadStatus('Image uploaded successfully!');
+      setUploadForm({
+        title: '',
+        category: 'sunday-service',
+        date: '',
+        description: '',
+        imageFile: null
+      });
+      setImagePreview(null);
+      fetchImages();
+      setTimeout(() => setUploadStatus(''), 3000);
     } catch (error) {
       console.error('Upload error:', error);
-      setUploadStatus('Error uploading image. Please try again.');
+      setUploadStatus(`Error: ${error.response?.data?.error || 'Upload failed'}`);
     } finally {
       setLoading(false);
     }
@@ -143,31 +135,51 @@ const AdminGallery = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/gallery/${imageId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        fetchImages();
-      } else {
-        alert('Error deleting image');
-      }
+      await axios.delete(`/api/gallery/${imageId}`);
+      fetchImages();
     } catch (error) {
       console.error('Delete error:', error);
       alert('Error deleting image');
     }
   };
 
+  const handleSyncFromAzure = async () => {
+    if (!window.confirm('This will recover images from Azure Blob Storage that are not in the gallery. Continue?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await axios.post('/api/gallery/sync-from-azure');
+      alert(`${response.data.message}\n\nAdded: ${response.data.added} images\nTotal: ${response.data.total} images`);
+      fetchImages();
+    } catch (error) {
+      console.error('Sync error:', error);
+      alert(`Error: ${error.response?.data?.error || 'Failed to sync images'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="admin-gallery">
-      <h2>📸 Photo Gallery Management</h2>
-      <p className="section-description">
-        Upload new photos or manage existing gallery images
-      </p>
+      <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div>
+          <h2>📸 Photo Gallery Management</h2>
+          <p className="section-description">
+            Upload new photos or manage existing gallery images
+          </p>
+        </div>
+        <button 
+          onClick={handleSyncFromAzure} 
+          className="btn btn-secondary"
+          disabled={loading}
+          style={{ marginLeft: '1rem' }}
+          title="Recover images from Azure Blob Storage"
+        >
+          🔄 Sync from Azure
+        </button>
+      </div>
 
       {/* Upload Form */}
       <div className="upload-section">
