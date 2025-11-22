@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from '../config/axios';
 import './Leadership.css';
 
 const Leadership = () => {
@@ -8,9 +9,8 @@ const Leadership = () => {
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const response = await fetch('/api/content');
-        const data = await response.json();
-        setContent(data);
+        const response = await axios.get('/api/content');
+        setContent(response.data);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching leadership:', error);
@@ -35,7 +35,8 @@ const Leadership = () => {
     if (!photoUrl) return null;
     // If it's an uploaded image, use backend URL
     if (photoUrl.startsWith('/uploads/')) {
-      return `http://localhost:5001${photoUrl}`;
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+      return `${API_URL}${photoUrl}`;
     }
     return photoUrl;
   };
