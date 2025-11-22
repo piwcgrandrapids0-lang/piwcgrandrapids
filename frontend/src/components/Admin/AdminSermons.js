@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from '../../config/axios';
 import './AdminSermons.css';
 
 const AdminSermons = () => {
@@ -22,9 +23,8 @@ const AdminSermons = () => {
 
   const fetchSermons = async () => {
     try {
-      const response = await fetch('/api/sermons');
-      const data = await response.json();
-      setSermons(Array.isArray(data) ? data : []);
+      const response = await axios.get('/api/sermons');
+      setSermons(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching sermons:', error);
       setSermons([]);
@@ -45,18 +45,17 @@ const AdminSermons = () => {
     formData.append('uploadType', 'videos');
     
     try {
-      const response = await fetch('/api/upload-video', {
-        method: 'POST',
-        body: formData
+      const response = await axios.post('/api/upload-video', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
       
-      const data = await response.json();
-      
-      if (data.success) {
-        alert(`Video uploaded successfully! (${(data.size / (1024 * 1024)).toFixed(2)} MB)`);
-        setFormData(prev => ({ ...prev, videoUrl: data.url }));
+      if (response.data.success) {
+        alert(`Video uploaded successfully! (${(response.data.size / (1024 * 1024)).toFixed(2)} MB)`);
+        setFormData(prev => ({ ...prev, videoUrl: response.data.url }));
       } else {
-        alert(`Upload failed: ${data.error}`);
+        alert(`Upload failed: ${response.data.error}`);
       }
     } catch (error) {
       console.error('Video upload error:', error);
@@ -64,6 +63,59 @@ const AdminSermons = () => {
     } finally {
       setUploading(false);
     }
+  };
+
+  // Convert YouTube URL to embed format before saving
+  const normalizeVideoUrl = (url) => {
+    if (!url || typeof url !== 'string') return '';
+    
+    url = url.trim();
+    
+    // If already an embed URL, validate and return
+    if (url.includes('youtube.com/embed/')) {
+      const embedMatch = url.match(/embed\/([^?&]+)/);
+      if (embedMatch && embedMatch[1] && /^[a-zA-Z0-9_-]{11}$/.test(embedMatch[1])) {
+        return `https://www.youtube.com/embed/${embedMatch[1]}`;
+      }
+    }
+    
+    // Extract video ID from various formats
+    let videoId = null;
+    
+    // youtube.com/watch?v=VIDEO_ID or youtube.com/v/VIDEO_ID
+    const watchMatch = url.match(/(?:[?&]v=|v\/)([^&?#]+)/);
+    if (watchMatch && watchMatch[1]) {
+      videoId = watchMatch[1].split('&')[0].split('#')[0];
+    }
+    
+    // youtube.com/live/VIDEO_ID (live streams)
+    if (!videoId) {
+      const liveMatch = url.match(/youtube\.com\/live\/([^?&#]+)/);
+      if (liveMatch && liveMatch[1]) {
+        videoId = liveMatch[1];
+      }
+    }
+    
+    // youtu.be/VIDEO_ID
+    if (!videoId) {
+      const shortMatch = url.match(/youtu\.be\/([^?&#]+)/);
+      if (shortMatch && shortMatch[1]) {
+        videoId = shortMatch[1];
+      }
+    }
+    
+    // Validate and return embed URL
+    if (videoId && /^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+      return `https://www.youtube.com/embed/${videoId}`;
+    }
+    
+    // If it's a YouTube URL but we couldn't extract a valid video ID, return empty string
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      return '';
+    }
+    
+    // Return original if it's not a YouTube URL (might be a different video platform)
+    return url;
   };
 
   const extractYouTubeId = (url) => {
@@ -75,34 +127,33 @@ const AdminSermons = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Convert YouTube URL to embed format
-    let videoUrl = formData.videoUrl;
-    if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
-      const videoId = extractYouTubeId(videoUrl);
-      if (videoId) {
-        videoUrl = `https://www.youtube.com/embed/${videoId}`;
+    // Convert YouTube URL to embed format using improved normalization
+    let videoUrl = normalizeVideoUrl(formData.videoUrl);
+    
+    // Validate video URL
+    if (formData.videoUrl && formData.videoUrl.trim()) {
+      // If normalization returned empty string or original URL unchanged (and it's not a valid embed URL), it's invalid
+      if (!videoUrl || videoUrl === '' || (videoUrl === formData.videoUrl && !videoUrl.includes('embed/'))) {
+        // Check if it's a YouTube URL that failed to normalize
+        if (formData.videoUrl.includes('youtube.com') || formData.videoUrl.includes('youtu.be')) {
+          alert('Invalid YouTube URL. Please use a valid YouTube video URL.\n\nSupported formats:\n- https://www.youtube.com/watch?v=VIDEO_ID\n- https://youtu.be/VIDEO_ID\n- https://www.youtube.com/live/VIDEO_ID\n- https://www.youtube.com/embed/VIDEO_ID');
+          return;
+        }
       }
     }
 
     try {
-      const token = localStorage.getItem('token');
       const url = editingSermon ? `/api/sermons/${editingSermon.id}` : '/api/sermons';
-      const method = editingSermon ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ ...formData, videoUrl })
-      });
-
-      if (response.ok) {
-        fetchSermons();
-        resetForm();
-        alert(editingSermon ? 'Sermon updated!' : 'Sermon added!');
+      
+      if (editingSermon) {
+        await axios.put(url, { ...formData, videoUrl });
+      } else {
+        await axios.post(url, { ...formData, videoUrl });
       }
+      
+      fetchSermons();
+      resetForm();
+      alert(editingSermon ? 'Sermon updated!' : 'Sermon added!');
     } catch (error) {
       console.error('Error saving sermon:', error);
       alert('Error saving sermon');
@@ -126,18 +177,9 @@ const AdminSermons = () => {
     if (!window.confirm('Are you sure you want to delete this sermon?')) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/sermons/${sermonId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        fetchSermons();
-        alert('Sermon deleted!');
-      }
+      await axios.delete(`/api/sermons/${sermonId}`);
+      fetchSermons();
+      alert('Sermon deleted!');
     } catch (error) {
       console.error('Error deleting sermon:', error);
       alert('Error deleting sermon');

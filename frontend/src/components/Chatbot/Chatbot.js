@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../../config/axios';
 import './Chatbot.css';
 
 const Chatbot = () => {

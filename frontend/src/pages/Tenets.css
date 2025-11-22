@@ -1,0 +1,103 @@
+.tenets-page {
+  min-height: 100vh;
+}
+
+.tenets-hero {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 4rem 0;
+  text-align: center;
+}
+
+.tenets-hero h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  font-weight: bold;
+}
+
+.tenets-hero .hero-subtitle {
+  font-size: 1.2rem;
+  opacity: 0.95;
+}
+
+.tenets-content {
+  padding: 4rem 0;
+}
+
+.tenets-intro {
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto 3rem;
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #555;
+}
+
+.tenets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.tenet-card {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  border-left: 4px solid #667eea;
+}
+
+.tenet-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+}
+
+.tenet-number {
+  position: absolute;
+  top: -15px;
+  left: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.tenet-title {
+  font-size: 1.5rem;
+  color: #333;
+  margin-bottom: 1rem;
+  margin-top: 0.5rem;
+  font-weight: 600;
+}
+
+.tenet-content {
+  color: #666;
+  line-height: 1.8;
+  font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  .tenets-hero h1 {
+    font-size: 2rem;
+  }
+
+  .tenets-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .tenet-card {
+    padding: 1.5rem;
+  }
+}
+

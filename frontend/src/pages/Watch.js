@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../config/axios';
 import './Watch.css';
 
 const Watch = () => {
@@ -23,48 +23,7 @@ const Watch = () => {
     }
   };
 
-  const placeholderSermons = [
-    {
-      id: 1,
-      title: 'Church of Pentecost - Live Service',
-      speaker: 'The Church of Pentecost',
-      date: '2025-11-10',
-      series: 'Sunday Worship',
-      description: 'Join us for powerful worship, inspiring messages, and life-changing moments from The Church of Pentecost.',
-      videoUrl: 'https://www.youtube.com/embed/e_bbZdZk7eM',
-      thumbnail: 'Service Thumbnail 1'
-    },
-    {
-      id: 2,
-      title: 'Church of Pentecost - Worship & Word',
-      speaker: 'The Church of Pentecost',
-      date: '2025-11-03',
-      series: 'Sunday Service',
-      description: 'Experience spirit-filled worship and powerful preaching from The Church of Pentecost.',
-      videoUrl: 'https://www.youtube.com/embed/0hui8AP1_j4',
-      thumbnail: 'Service Thumbnail 2'
-    },
-    {
-      id: 3,
-      title: 'Church of Pentecost - Live Broadcast',
-      speaker: 'The Church of Pentecost',
-      date: '2025-10-27',
-      series: 'Special Service',
-      description: 'Join believers worldwide for this special service from The Church of Pentecost.',
-      videoUrl: 'https://www.youtube.com/embed/wT60VvXIU44',
-      thumbnail: 'Service Thumbnail 3'
-    },
-    {
-      id: 4,
-      title: 'Church of Pentecost - Sunday Service',
-      speaker: 'The Church of Pentecost',
-      date: '2025-10-20',
-      series: 'Sunday Worship',
-      description: 'Powerful ministry and worship from The Church of Pentecost headquarters.',
-      videoUrl: 'https://www.youtube.com/embed/gvcRQWNAsdc',
-      thumbnail: 'Service Thumbnail 4'
-    }
-  ];
+  const placeholderSermons = [];
 
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -108,15 +67,59 @@ const Watch = () => {
               {/* Featured Sermon */}
               <div className="featured-sermon">
                 <div className="featured-video">
-                  <iframe
-                    width="100%"
-                    height="100%"
-                    src={sermons[0].videoUrl}
-                    title={sermons[0].title}
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
+                  {sermons[0].videoUrl ? (
+                    <>
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        src={`${sermons[0].videoUrl}?feature=oembed&rel=0&modestbranding=1`}
+                        title={sermons[0].title}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        referrerPolicy="strict-origin-when-cross-origin"
+                      ></iframe>
+                      <div className="video-error-message" style={{ 
+                        display: 'none', 
+                        padding: '2rem', 
+                        textAlign: 'center',
+                        background: '#f8f9fa',
+                        borderRadius: '8px',
+                        marginTop: '1rem'
+                      }}>
+                        <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: '#dc3545' }}>
+                          ⚠️ Error 153: Video Unavailable
+                        </p>
+                        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                          This video may be private, deleted, or embedding may be disabled by the owner.
+                        </p>
+                        <p style={{ fontSize: '0.85rem', color: '#999', marginBottom: '1rem' }}>
+                          Video ID: {sermons[0].videoUrl.match(/embed\/([^?]+)/)?.[1] || 'Unknown'}
+                        </p>
+                        <a 
+                          href={sermons[0].videoUrl.replace('/embed/', '/watch?v=')} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="btn btn-primary"
+                          style={{ display: 'inline-block', marginRight: '1rem' }}
+                        >
+                          Try on YouTube
+                        </a>
+                        <a 
+                          href={`https://www.youtube.com/watch?v=dQw4w9WgXcQ`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontSize: '0.85rem', color: '#667eea', textDecoration: 'underline' }}
+                        >
+                          Test with working video
+                        </a>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="placeholder-video">
+                      <p>Video not available</p>
+                    </div>
+                  )}
                 </div>
                 <div className="featured-info">
                   <span className="sermon-series">{sermons[0].series}</span>
@@ -144,15 +147,41 @@ const Watch = () => {
                 {sermons.slice(1).map((sermon) => (
                   <div key={sermon.id} className="sermon-card">
                     <div className="sermon-thumbnail">
-                      <iframe
-                        width="100%"
-                        height="100%"
-                        src={sermon.videoUrl}
-                        title={sermon.title}
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      ></iframe>
+                      {sermon.videoUrl ? (
+                        <>
+                          <iframe
+                            width="100%"
+                            height="100%"
+                            src={`${sermon.videoUrl}?feature=oembed&rel=0&modestbranding=1`}
+                            title={sermon.title}
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                            referrerPolicy="strict-origin-when-cross-origin"
+                          ></iframe>
+                          <div className="placeholder-thumbnail" style={{ display: 'none' }}>
+                            <div style={{ textAlign: 'center', padding: '1rem' }}>
+                              <p style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>⚠️ Video Not Available</p>
+                              <a 
+                                href={sermon.videoUrl.replace('/embed/', '/watch?v=')} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                style={{ 
+                                  fontSize: '0.85rem',
+                                  color: '#667eea',
+                                  textDecoration: 'underline'
+                                }}
+                              >
+                                Watch on YouTube
+                              </a>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="placeholder-thumbnail">
+                          <p>Video not available</p>
+                        </div>
+                      )}
                     </div>
                     <div className="sermon-card-content">
                       <span className="sermon-series">{sermon.series}</span>
@@ -200,4 +229,3 @@ const Watch = () => {
 };
 
 export default Watch;
-

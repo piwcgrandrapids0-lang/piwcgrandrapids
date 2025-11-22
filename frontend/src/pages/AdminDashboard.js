@@ -9,6 +9,8 @@ import AdminContent from '../components/Admin/AdminContent';
 import AdminMessages from '../components/Admin/AdminMessages';
 import AdminEvents from '../components/Admin/AdminEvents';
 import AdminSermons from '../components/Admin/AdminSermons';
+import AdminThemes from '../components/Admin/AdminThemes';
+import AdminTenets from '../components/Admin/AdminTenets';
 import AdminSettings from '../components/Admin/AdminSettings';
 
 const AdminDashboard = () => {
@@ -33,6 +35,8 @@ const AdminDashboard = () => {
     { id: 'events', name: 'Events', icon: '📅' },
     { id: 'sermons', name: 'Sermons/Watch', icon: '🎥' },
     { id: 'messages', name: 'Messages & Prayers', icon: '💬' },
+    { id: 'themes', name: 'Themes', icon: '📖' },
+    { id: 'tenets', name: 'Tenets', icon: '📜' },
     { id: 'settings', name: 'Settings', icon: '⚙️' },
   ];
 
@@ -74,6 +78,8 @@ const AdminDashboard = () => {
           {activeTab === 'events' && <AdminEvents />}
           {activeTab === 'sermons' && <AdminSermons />}
           {activeTab === 'messages' && <AdminMessages />}
+          {activeTab === 'themes' && <AdminThemes />}
+          {activeTab === 'tenets' && <AdminTenets />}
           {activeTab === 'settings' && <AdminSettings />}
         </div>
       </div>

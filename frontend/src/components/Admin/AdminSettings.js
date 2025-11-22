@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import axios from '../../config/axios';
 import './AdminSettings.css';
 
 const AdminSettings = () => {
@@ -43,36 +44,22 @@ const AdminSettings = () => {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          currentPassword: passwordForm.currentPassword,
-          newPassword: passwordForm.newPassword
-        })
+      const response = await axios.post('/api/auth/change-password', {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage({ type: 'success', text: 'Password changed successfully!' });
-        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-        
-        // Optional: Auto-logout after password change
-        setTimeout(() => {
-          alert('Please log in again with your new password');
-          handleLogout();
-        }, 2000);
-      } else {
-        setMessage({ type: 'error', text: `${data.message || 'Failed to change password'}` });
-      }
+      setMessage({ type: 'success', text: 'Password changed successfully!' });
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      
+      // Optional: Auto-logout after password change
+      setTimeout(() => {
+        alert('Please log in again with your new password');
+        handleLogout();
+      }, 2000);
     } catch (error) {
       console.error('Error changing password:', error);
-      setMessage({ type: 'error', text: 'Error changing password. Please try again.' });
+      setMessage({ type: 'error', text: error.response?.data?.message || 'Error changing password. Please try again.' });
     } finally {
       setLoading(false);
     }

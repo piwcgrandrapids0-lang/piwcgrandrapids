@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from '../config/axios';
 import './MissionVision.css';
 
 const MissionVision = () => {
@@ -8,9 +9,8 @@ const MissionVision = () => {
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const response = await fetch('/api/content');
-        const data = await response.json();
-        setContent(data.missionVision);
+        const response = await axios.get('/api/content');
+        setContent(response.data.missionVision);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching content:', error);
