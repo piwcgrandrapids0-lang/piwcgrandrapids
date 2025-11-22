@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from '../config/axios';
 import './Gallery.css';
 
 const Gallery = () => {
@@ -32,8 +33,8 @@ const Gallery = () => {
 
   const fetchImages = async () => {
     try {
-      const response = await fetch('/api/gallery');
-      const data = await response.json();
+      const response = await axios.get('/api/gallery');
+      const data = response.data;
       setImages(data.sort((a, b) => new Date(b.date) - new Date(a.date)));
       setFilteredImages(data.sort((a, b) => new Date(b.date) - new Date(a.date)));
       setLoading(false);
