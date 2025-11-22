@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from '../config/axios';
 import './OurBeliefs.css';
 
 const OurBeliefs = () => {
@@ -8,9 +9,8 @@ const OurBeliefs = () => {
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const response = await fetch('/api/content');
-        const data = await response.json();
-        setContent(data.beliefs);
+        const response = await axios.get('/api/content');
+        setContent(response.data.beliefs);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching content:', error);
