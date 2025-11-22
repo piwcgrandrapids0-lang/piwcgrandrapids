@@ -1,8 +1,40 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import axios from '../config/axios';
 import './AboutUs.css';
 
 const AboutUs = () => {
+  const [content, setContent] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchContent();
+  }, []);
+
+  const fetchContent = async () => {
+    try {
+      const response = await axios.get('/api/content');
+      setContent(response.data);
+    } catch (error) {
+      console.error('Error fetching content:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="about-page">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const aboutContent = content?.about || {};
+
   return (
     <div className="about-page">
       <section className="about-hero">
@@ -18,24 +50,55 @@ const AboutUs = () => {
         <div className="container">
           <div className="about-content">
             <div className="about-text">
-              <h2>Who We Are</h2>
-              <p>
-                PIWC Grand Rapids is a vibrant congregation of The Church of Pentecost, 
-                a global denomination with a rich heritage of Pentecostal faith and practice. 
-                We are part of a worldwide family of believers united in our commitment to 
-                spreading the Gospel of Jesus Christ.
-              </p>
-              <p>
-                Our church was established to serve the Grand Rapids community and the broader 
-                West Michigan area. We are a multicultural congregation that celebrates diversity 
-                while maintaining unity in Christ. Whether you're from Ghana, the United States, 
-                or anywhere in the world, you'll find a home here.
-              </p>
-              <p>
-                At PIWC Grand Rapids, we believe that the church should be a place where people 
-                encounter God's presence, experience authentic community, and are equipped to 
-                make a difference in the world.
-              </p>
+              {aboutContent.mission && (
+                <div style={{ marginBottom: '2rem' }}>
+                  <h2>Mission Statement</h2>
+                  <p style={{ fontSize: '1.1rem', lineHeight: '1.8', color: '#333' }}>
+                    {aboutContent.mission}
+                  </p>
+                </div>
+              )}
+              
+              {aboutContent.vision && (
+                <div style={{ marginBottom: '2rem' }}>
+                  <h2>Vision Statement</h2>
+                  <p style={{ fontSize: '1.1rem', lineHeight: '1.8', color: '#333' }}>
+                    {aboutContent.vision}
+                  </p>
+                </div>
+              )}
+              
+              {aboutContent.description && (
+                <div style={{ marginBottom: '2rem' }}>
+                  <h2>About Description</h2>
+                  <p style={{ fontSize: '1rem', lineHeight: '1.8', color: '#555', whiteSpace: 'pre-line' }}>
+                    {aboutContent.description}
+                  </p>
+                </div>
+              )}
+              
+              {!aboutContent.mission && !aboutContent.vision && !aboutContent.description && (
+                <>
+                  <h2>Who We Are</h2>
+                  <p>
+                    PIWC Grand Rapids is a vibrant congregation of The Church of Pentecost, 
+                    a global denomination with a rich heritage of Pentecostal faith and practice. 
+                    We are part of a worldwide family of believers united in our commitment to 
+                    spreading the Gospel of Jesus Christ.
+                  </p>
+                  <p>
+                    Our church was established to serve the Grand Rapids community and the broader 
+                    West Michigan area. We are a multicultural congregation that celebrates diversity 
+                    while maintaining unity in Christ. Whether you're from Ghana, the United States, 
+                    or anywhere in the world, you'll find a home here.
+                  </p>
+                  <p>
+                    At PIWC Grand Rapids, we believe that the church should be a place where people 
+                    encounter God's presence, experience authentic community, and are equipped to 
+                    make a difference in the world.
+                  </p>
+                </>
+              )}
             </div>
             <div className="about-image">
               <div className="placeholder-image">
@@ -46,58 +109,23 @@ const AboutUs = () => {
         </div>
       </section>
 
-      <section className="section values-section">
+
+      {/* Tenets Section */}
+      <section className="section tenets-section" style={{ background: '#f8f9fa', padding: '4rem 0' }}>
         <div className="container">
-          <h2 className="section-title">Our Core Values</h2>
-          <div className="values-grid">
-            <div className="value-card">
-              <div className="value-icon">🙏</div>
-              <h3>Worship</h3>
-              <p>
-                We are passionate about worshiping God with all our hearts, minds, and strength. 
-                Our worship is Spirit-filled, biblical, and centered on Jesus Christ.
-              </p>
-            </div>
-            <div className="value-card">
-              <div className="value-icon">📖</div>
-              <h3>Biblical Truth</h3>
-              <p>
-                We believe the Bible is God's inspired Word and the final authority for faith 
-                and practice. We are committed to teaching and living out biblical truth.
-              </p>
-            </div>
-            <div className="value-card">
-              <div className="value-icon">❤️</div>
-              <h3>Community</h3>
-              <p>
-                We are family. We believe in doing life together, supporting one another, 
-                and creating a welcoming environment where everyone belongs.
-              </p>
-            </div>
-            <div className="value-card">
-              <div className="value-icon">🌍</div>
-              <h3>Mission</h3>
-              <p>
-                We are called to share the Gospel locally and globally. We are committed to 
-                evangelism, missions, and making disciples of all nations.
-              </p>
-            </div>
-            <div className="value-card">
-              <div className="value-icon">🤲</div>
-              <h3>Service</h3>
-              <p>
-                Following Jesus' example, we serve others with humility and love. We are 
-                committed to meeting practical needs in our community.
-              </p>
-            </div>
-            <div className="value-card">
-              <div className="value-icon">🔥</div>
-              <h3>Spirit-Empowered</h3>
-              <p>
-                We believe in the power and gifts of the Holy Spirit. We depend on the Spirit 
-                to guide, empower, and transform us.
-              </p>
-            </div>
+          <div style={{ textAlign: 'center', maxWidth: '800px', margin: '0 auto' }}>
+            <h2 className="section-title">Our Tenets</h2>
+            <p className="section-subtitle" style={{ fontSize: '1.1rem', color: '#666', marginBottom: '2rem' }}>
+              The foundational beliefs and doctrines of The Church of Pentecost, USA Inc.
+            </p>
+            <p style={{ fontSize: '1rem', lineHeight: '1.8', color: '#555', marginBottom: '2rem' }}>
+              As part of The Church of Pentecost, USA Inc., we are built upon biblical tenets that 
+              guide our faith, practice, and mission. These core beliefs form the foundation of our 
+              identity as a Pentecostal denomination and shape how we worship, serve, and live out our faith.
+            </p>
+            <Link to="/tenets" className="btn btn-primary" style={{ fontSize: '1.1rem', padding: '1rem 2.5rem' }}>
+              📖 View All Tenets
+            </Link>
           </div>
         </div>
       </section>
