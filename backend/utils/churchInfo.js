@@ -25,6 +25,7 @@ const churchInfo = {
   contact: {
     phone: "(616) 123-4567", // Update with actual phone
     email: "piwcgrandrapids0@gmail.com",
+    website: "https://www.piwcgrandrapids.com",
     instagram: "https://www.instagram.com/piwc_grandrapids/",
     facebook: "https://www.facebook.com/thechurchofpentecostgrandrapids"
   },
