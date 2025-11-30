@@ -322,7 +322,7 @@ async function sendConfirmationEmail(toEmail, name, type = 'contact') {
             </ul>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${churchInfo.contact.facebook}" class="btn">Visit Our Website</a>
+              <a href="${churchInfo.contact.website}" class="btn">Visit Our Website</a>
             </div>
           </div>
           
