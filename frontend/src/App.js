@@ -8,6 +8,7 @@ import './App.css';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Chatbot from './components/Chatbot/Chatbot';
+import UnderConstructionModal from './components/UnderConstructionModal/UnderConstructionModal';
 
 // Pages
 import Home from './pages/Home';
@@ -64,6 +65,7 @@ function App() {
             </main>
             <Footer />
             <Chatbot />
+            <UnderConstructionModal />
           </div>
         </Router>
       </AuthProvider>

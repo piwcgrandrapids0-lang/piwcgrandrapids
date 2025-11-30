@@ -102,6 +102,56 @@ const AdminContent = () => {
     });
   };
 
+  // Helper for nested array changes (e.g., imNew.whatToExpect.steps)
+  const handleNestedArrayItemChange = (section, parent, arrayName, index, field, value) => {
+    setContent(prev => {
+      const newArray = [...prev[section][parent][arrayName]];
+      newArray[index] = { ...newArray[index], [field]: value };
+      return {
+        ...prev,
+        [section]: {
+          ...prev[section],
+          [parent]: {
+            ...prev[section][parent],
+            [arrayName]: newArray
+          }
+        }
+      };
+    });
+  };
+
+  // Helper for adding items to nested arrays
+  const handleAddNestedArrayItem = (section, parent, arrayName, newItem) => {
+    setContent(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [parent]: {
+          ...prev[section][parent],
+          [arrayName]: [...(prev[section][parent][arrayName] || []), newItem]
+        }
+      }
+    }));
+  };
+
+  // Helper for deleting items from nested arrays
+  const handleDeleteNestedArrayItem = (section, parent, arrayName, index) => {
+    setContent(prev => {
+      const newArray = [...prev[section][parent][arrayName]];
+      newArray.splice(index, 1);
+      return {
+        ...prev,
+        [section]: {
+          ...prev[section],
+          [parent]: {
+            ...prev[section][parent],
+            [arrayName]: newArray
+          }
+        }
+      };
+    });
+  };
+
   const handleFileUpload = async (file) => {
     if (!file) return null;
     
@@ -801,6 +851,57 @@ const AdminContent = () => {
                   rows="4"
                 />
               </div>
+              <div className="form-group">
+                <label>Image</label>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: '200px' }}>
+                    <input
+                      type="text"
+                      value={content.about.imageUrl || ''}
+                      onChange={(e) => handleChange('about', 'imageUrl', e.target.value)}
+                      placeholder="/uploads/images/church-community.jpg"
+                    />
+                    <small>Image URL (auto-filled after upload)</small>
+                  </div>
+                  <div>
+                    <label 
+                      htmlFor="aboutImage" 
+                      className="btn btn-secondary" 
+                      style={{ cursor: 'pointer', margin: 0 }}
+                    >
+                      {uploading ? '⏳ Uploading...' : '📤 Upload Image'}
+                    </label>
+                    <input
+                      id="aboutImage"
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          const url = await handleFileUpload(file);
+                          if (url) {
+                            handleChange('about', 'imageUrl', url);
+                          }
+                        }
+                      }}
+                      disabled={uploading}
+                    />
+                  </div>
+                </div>
+                {content.about.imageUrl && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <img 
+                      src={content.about.imageUrl} 
+                      alt="About Us Preview" 
+                      style={{ maxWidth: '300px', maxHeight: '200px', borderRadius: '8px', objectFit: 'cover' }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => handleSave('about')}
                 className="btn btn-gold"
@@ -1393,6 +1494,80 @@ const AdminContent = () => {
                   rows="2"
                 />
               </div>
+              
+              <h5>Steps</h5>
+              {content.imNew.whatToExpect.steps && content.imNew.whatToExpect.steps.map((step, index) => (
+                <div key={index} className="array-item">
+                  <h6>Step {index + 1}</h6>
+                  <div className="form-group">
+                    <label>Title</label>
+                    <input
+                      type="text"
+                      value={step.title}
+                      onChange={(e) => handleNestedArrayItemChange('imNew', 'whatToExpect', 'steps', index, 'title', e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Description</label>
+                    <textarea
+                      value={step.description}
+                      onChange={(e) => handleNestedArrayItemChange('imNew', 'whatToExpect', 'steps', index, 'description', e.target.value)}
+                      rows="2"
+                    />
+                  </div>
+                  <button
+                    onClick={() => handleDeleteNestedArrayItem('imNew', 'whatToExpect', 'steps', index)}
+                    className="btn btn-danger btn-sm"
+                    style={{ marginBottom: '1rem' }}
+                  >
+                    🗑️ Delete Step
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => handleAddNestedArrayItem('imNew', 'whatToExpect', 'steps', { title: '', description: '' })}
+                className="btn btn-secondary"
+                style={{ marginBottom: '1rem' }}
+              >
+                ➕ Add Step
+              </button>
+
+              <h4>FAQ Section</h4>
+              {content.imNew.faq && content.imNew.faq.map((item, index) => (
+                <div key={index} className="array-item">
+                  <h6>FAQ {index + 1}</h6>
+                  <div className="form-group">
+                    <label>Question</label>
+                    <input
+                      type="text"
+                      value={item.question}
+                      onChange={(e) => handleArrayItemChange('imNew', 'faq', index, 'question', e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Answer</label>
+                    <textarea
+                      value={item.answer}
+                      onChange={(e) => handleArrayItemChange('imNew', 'faq', index, 'answer', e.target.value)}
+                      rows="3"
+                    />
+                  </div>
+                  <button
+                    onClick={() => handleDeleteArrayItem('imNew', 'faq', index)}
+                    className="btn btn-danger btn-sm"
+                    style={{ marginBottom: '1rem' }}
+                  >
+                    🗑️ Delete FAQ
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => handleAddArrayItem('imNew', 'faq', { question: '', answer: '' })}
+                className="btn btn-secondary"
+                style={{ marginBottom: '1rem' }}
+              >
+                ➕ Add FAQ
+              </button>
 
               <h4>Next Steps</h4>
               <div className="form-group">
@@ -1411,6 +1586,44 @@ const AdminContent = () => {
                   rows="2"
                 />
               </div>
+              
+              <h5>Steps List</h5>
+              {content.imNew.nextSteps.steps && content.imNew.nextSteps.steps.map((step, index) => (
+                <div key={index} className="array-item">
+                  <div className="form-group">
+                    <label>Step {index + 1}</label>
+                    <input
+                      type="text"
+                      value={step}
+                      onChange={(e) => {
+                        const newSteps = [...content.imNew.nextSteps.steps];
+                        newSteps[index] = e.target.value;
+                        handleNestedChange('imNew', 'nextSteps', 'steps', newSteps);
+                      }}
+                    />
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newSteps = content.imNew.nextSteps.steps.filter((_, i) => i !== index);
+                      handleNestedChange('imNew', 'nextSteps', 'steps', newSteps);
+                    }}
+                    className="btn btn-danger btn-sm"
+                    style={{ marginBottom: '1rem' }}
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  const newSteps = [...(content.imNew.nextSteps.steps || []), ''];
+                  handleNestedChange('imNew', 'nextSteps', 'steps', newSteps);
+                }}
+                className="btn btn-secondary"
+                style={{ marginBottom: '1rem' }}
+              >
+                ➕ Add Step
+              </button>
 
               <button onClick={() => handleSave('imNew')} className="btn btn-gold" disabled={saving}>
                 {saving ? '⏳ Saving...' : '💾 Save Changes'}

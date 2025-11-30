@@ -236,7 +236,8 @@ piwcgrandrapids/
 │   │   ├── messages.json      # Contact messages
 │   │   ├── prayers.json       # Prayer requests
 │   │   ├── gallery.json       # Gallery metadata
-│   │   └── content.json       # Website content
+│   │   ├── content.json       # Website content / leadership details
+│   │   └── users.json         # Admin accounts + hashed passwords
 │   ├── middleware/
 │   │   └── auth.js             # JWT authentication
 │   ├── routes/
@@ -310,16 +311,20 @@ This project is configured for Microsoft Azure with:
 
 ### Data Persistence
 
-**Important**: All data persists between deployments:
-- ✅ **Sermons**: Stored in `backend/data/sermons.json` on Azure (excluded from deployment)
-- ✅ **Events**: Stored in `backend/data/events.json` on Azure
-- ✅ **Messages**: Stored in `backend/data/messages.json` on Azure
-- ✅ **Prayers**: Stored in `backend/data/prayers.json` on Azure
-- ✅ **Gallery Metadata**: Stored in `backend/data/gallery.json` on Azure
-- ✅ **Images**: Stored in Azure Blob Storage (permanent cloud storage)
-- ✅ **Videos**: YouTube URLs stored in `sermons.json`
+**Important**: Persistent data lives on the Azure App Service filesystem and in Azure Blob Storage. The deployment script (`backend/deploy.sh`) automatically **excludes `backend/data/` and `uploads/`** so Azure keeps your live JSON files and all Blob-stored media.
 
-**Note**: The `backend/data/` directory is excluded from deployment to preserve data on Azure between redeployments.
+| Data | Storage Location | Notes |
+|------|-----------------|-------|
+| Admin users (`users.json`) | `backend/data/users.json` on Azure | Password hashes updated in the Admin UI persist; ZIP deployments never overwrite this file |
+| Sermons (`sermons.json`) | `backend/data/` on Azure | JSON files stay on the App Service because they are **excluded from the ZIP** |
+| Events, Messages, Prayers | `backend/data/*.json` | Same persistence as above |
+| Gallery metadata (`gallery.json`) | `backend/data/gallery.json` | References Azure Blob Storage URLs; rebuild via “Sync from Azure” if needed |
+| Uploaded images/videos | Azure Blob Storage (`church-images` container) | Survive deployments; accessible via HTTPS URLs |
+| Local `/uploads` paths | *Not persisted* | Any entry still pointing to `/uploads/...` is removed on startup; re-upload via Admin UI |
+
+**Gallery Recovery:** If you ever need to rebuild `gallery.json` from Blob Storage, sign in to the Admin Dashboard and use **Gallery → Sync from Azure** (or call `POST /api/gallery/sync-from-azure`). This scans the container and repopulates missing entries.
+
+**Leadership/Content Images:** Update the URLs in **Admin → Content** so they point to Azure Blob Storage or hosted HTTPS links. Paths like `/assets/...` or `/uploads/...` will fail in production.
 
 ### Cost Estimate (Azure)
 
@@ -406,4 +411,4 @@ For issues or questions:
 **Built with ❤️ for PIWC Grand Rapids**  
 *The Church of Pentecost USA, Inc. - Detroit District*
 
-**Last Updated**: November 21, 2025 | **Version**: 1.0.1
+**Last Updated**: November 29, 2025 | **Version**: 1.0.1

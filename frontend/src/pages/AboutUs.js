@@ -101,7 +101,17 @@ const AboutUs = () => {
               )}
             </div>
             <div className="about-image">
-              <div className="placeholder-image">
+              {aboutContent.imageUrl ? (
+                <img 
+                  src={aboutContent.imageUrl.startsWith('http') ? aboutContent.imageUrl : `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}${aboutContent.imageUrl}`}
+                  alt="About PIWC Grand Rapids"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div className="placeholder-image" style={{ display: aboutContent.imageUrl ? 'none' : 'flex' }}>
                 <span>Church Community Photo</span>
               </div>
             </div>

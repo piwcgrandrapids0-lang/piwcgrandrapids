@@ -261,6 +261,7 @@ zip -r backend-deploy.zip . \
   -x "*.git*" \
   -x "*.env" \
   -x "node_modules/*" \
+  -x "data/*" \
   -x "uploads/*" \
   -x "*.DS_Store" \
   -x "backend-deploy.zip"
@@ -284,6 +285,15 @@ cd backend
 
 # Create deployment package
 zip -r backend.zip . -x "*.git*" "node_modules/*" ".env" "uploads/*"
+```
+becomes
+```bash
+zip -r backend.zip . \
+  -x "*.git*" \
+  -x "node_modules/*" \
+  -x ".env" \
+  -x "uploads/*" \
+  -x "data/*"
 
 # Deploy to Azure (legacy method - deprecated)
 az webapp deployment source config-zip \
@@ -300,6 +310,7 @@ rm backend.zip
 - Exclude `.env` file from deployment (environment variables are set via Azure App Settings)
 - Exclude `node_modules` (Azure will install dependencies automatically)
 - Exclude `uploads` folder (use Azure Blob Storage for production)
+- Exclude `backend/data/` so Azure keeps your live JSON data (sermons, events, gallery metadata, etc.)
 
 ### Step 3: Verify Backend Deployment
 
@@ -743,16 +754,22 @@ The backend is configured to upload all images to Azure Blob Storage. In product
 - Check image URLs in the gallery - they should start with `https://piwcgrimages.blob.core.windows.net/`
 - If you see URLs like `/uploads/gallery/...`, those are local paths and will be lost
 
-**If images disappear after deployment:**
-1. Check Azure Storage connection string is set: `AZURE_STORAGE_CONNECTION_STRING`
-2. Check backend logs for Azure upload errors
-3. Re-upload images through the admin panel (they'll be saved to Azure)
+- **Sync Tool:** The Admin Gallery screen exposes a **“Sync from Azure”** action (or call `POST /api/gallery/sync-from-azure`) to rebuild `gallery.json` from every blob stored under `gallery/`.
+- **Data Folder:** Because `deploy.sh` excludes `backend/data/`, your live `*.json` files (sermons, events, gallery metadata, etc.) stay untouched on Azure between deployments.
+- **Leadership / Content Images:** Update `backend/data/content.json` (or use the Admin UI) so `photoUrl` fields point to Azure blob URLs or other HTTPS locations. Paths such as `/uploads/...` or `/assets/...` won’t exist in production.
 
 **If images disappear after deployment:**
-1. Check Azure Storage connection string is set: `AZURE_STORAGE_CONNECTION_STRING`
-2. Check backend logs for Azure upload errors
-3. Use "Sync from Azure" button in Admin Gallery to recover images
-4. Re-upload images through the admin panel (they'll be saved to Azure)
+1. Confirm `AZURE_STORAGE_CONNECTION_STRING` is set in App Settings.
+2. Tail logs for Azure upload errors.
+3. Use "Sync from Azure" in Gallery → Admin to repopulate metadata.
+4. Re-upload missing images so new entries save to Azure Blob Storage.
+
+- **Azure Portal Checklist (Quick Reference)**
+  1. **App Settings** – Azure Portal → Resource Group → `piwcgr-api` → *Configuration* → *Application settings*. Verify all required keys (NODE_ENV, PORT=8080, JWT_SECRET, GEMINI_API_KEY, SMTP creds, CHURCH_EMAIL/PHONE, AZURE_STORAGE_*). Missing entries? Click **+ New application setting**, add value, Save (app auto-restarts).
+  2. **CORS** – Azure Portal → `piwcgr-api` → *API* → *CORS*. Allowed origins should include `https://www.piwcgrandrapids.com`, the Static Web App URL, and `http://localhost:3000`. CLI check: `az webapp cors show --resource-group piwc-grandrapids-rg --name piwcgr-api`.
+  3. **General Settings** – Ensure **Always On = On**, **HTTPS Only = On**, **HTTP/2 = On** under *Configuration → General settings*.
+  4. **Custom Domains / Deployment Center** – Optional extras if you need vanity domains or CI/CD.
+  5. **Status Checks** – `az webapp show --resource-group piwc-grandrapids-rg --name piwcgr-api --query "{state:state, status:state, defaultHostName:defaultHostName}" --output table`.
 
 ### Backend Configuration
 
@@ -808,17 +825,18 @@ The backend has CORS configured in two places:
 - Helper functions in `Home.js` and `Leadership.js` handle URL conversion for uploaded images
 - ⚠️ **Important**: Images saved locally (`/uploads/...`) will be LOST on redeployment
 
-**Data Persistence:**
-- The `backend/data/` directory is **excluded** from deployment to preserve data on Azure
-- All data files persist between deployments:
-  - `sermons.json` - Sermons and video URLs
-  - `events.json` - Events
-  - `messages.json` - Contact messages
-  - `prayers.json` - Prayer requests
-  - `gallery.json` - Gallery metadata
-  - `content.json` - Website content
-- Images are stored in Azure Blob Storage (permanent)
-- Videos are YouTube URLs (stored in `sermons.json`)
+**Data Persistence (JSON + Credentials):**
+- Deployment scripts **exclude `backend/data/`** so Azure keeps the live JSON files created through the Admin Dashboard.
+- Files that remain on the App Service between deployments:
+  - `users.json` – Admin accounts/password hashes (update passwords via the Admin UI and they will persist)
+  - `sermons.json` – Sermons and video URLs
+  - `events.json` – Events
+  - `messages.json` – Contact messages
+  - `prayers.json` – Prayer requests
+  - `gallery.json` – Gallery metadata (points to Azure Blob images)
+  - `content.json` – Website content / leadership data
+- Images continue to live in Azure Blob Storage (`church-images` container), so redeployments never delete them.
+- Videos remain as YouTube URLs saved inside `sermons.json`.
 
 ### Features Implemented
 
@@ -862,6 +880,29 @@ The backend has CORS configured in two places:
 ---
 
 ## Troubleshooting
+
+### CORS Errors from `https://www.piwcgrandrapids.com`
+
+Symptoms (browser console):
+```
+Access to XMLHttpRequest at 'https://piwcgr-api.azurewebsites.net/api/...'
+from origin 'https://www.piwcgrandrapids.com' has been blocked by CORS policy
+```
+
+**Fix checklist:**
+1. **Deploy latest backend** – New CORS origin list lives in `server.js`. Use `./deploy.sh` (or `./deploy.sh with-cors` to deploy + refresh CORS in one go) so the updated list reaches Azure.
+2. **Update Azure CORS** – Either run `./deploy.sh cors` (refresh origins + restart) or manually add `https://www.piwcgrandrapids.com` via Portal (API → CORS). CLI:
+   ```bash
+   az webapp cors add \
+     --resource-group piwc-grandrapids-rg \
+     --name piwcgr-api \
+     --allowed-origins "https://www.piwcgrandrapids.com"
+   ```
+3. **Restart App Service** – `az webapp restart --resource-group piwc-grandrapids-rg --name piwcgr-api`.
+4. **Verify headers** – `curl -s -D - -H "Origin: https://www.piwcgrandrapids.com" https://piwcgr-api.azurewebsites.net/api/content | grep -i access-control`.
+5. **Hard refresh / clear cache** – Browsers sometimes cache failed preflight responses; use Ctrl/Cmd+Shift+R or Incognito.
+
+If headers still missing, run `az webapp log tail ...` immediately after an OPTIONS call to see server output; most often a missing env var, not CORS, is blocking the handler.
 
 ### Backend Not Starting
 
@@ -988,6 +1029,33 @@ az webapp deployment source delete \
 
 ---
 
+### Deployment Stuck on "Starting the site..."
+
+If `az webapp deploy` sits on *Starting the site...* for several minutes or eventually fails with *site failed to start within 10 mins*:
+
+1. **Cancel the deployment (Ctrl+C)** so you can investigate.
+2. **Tail application logs**:
+   ```bash
+   az webapp log tail --resource-group piwc-grandrapids-rg --name piwcgr-api
+   ```
+   Look for missing env vars, port errors, or stack traces.
+3. **Check deployment logs**:
+   ```bash
+   az webapp log deployment show --resource-group piwc-grandrapids-rg --name piwcgr-api
+   ```
+4. **Common causes**
+   - Missing environment variables (JWT_SECRET, SMTP_PASS, Azure storage key).
+   - npm install taking too long on Free tier; consider B1 plan or rerun.
+   - App hitting Free tier CPU quota; wait for reset or upgrade.
+   - Startup errors (syntax, module not found). Fix code and redeploy.
+5. **Quick health test** (after restart):
+   ```bash
+   curl -s https://piwcgr-api.azurewebsites.net/api/health
+   ```
+   Expect `{"status":"OK","message":"Server is running"}`.
+
+If issues persist, redeploy after fixing the root cause; the `backend/check-azure-config.sh` helper can re-check status, environment variables, and CORS settings.
+
 ## Quick Deployment Commands
 
 ### Complete Deployment Script
@@ -1082,5 +1150,5 @@ The PIWC Grand Rapids website is now live on Azure with:
 - ✅ HTTPS security
 - ✅ Custom domain ready
 
-**Last Updated**: November 21, 2025
+**Last Updated**: November 29, 2025
 

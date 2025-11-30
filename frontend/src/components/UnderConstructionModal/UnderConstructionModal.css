@@ -1,0 +1,246 @@
+.construction-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.3s ease-in-out;
+  padding: 20px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.construction-modal-content {
+  background: white;
+  border-radius: 16px;
+  max-width: 550px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+  position: relative;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.construction-modal-header {
+  background: linear-gradient(135deg, var(--primary-blue) 0%, #004080 100%);
+  color: white;
+  padding: 24px 28px;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.construction-modal-header h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.construction-modal-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 32px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  line-height: 1;
+  padding: 0;
+}
+
+.construction-modal-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+.construction-modal-body {
+  padding: 32px 28px;
+  text-align: center;
+}
+
+.construction-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.construction-message {
+  font-size: 1.4rem;
+  color: var(--text-primary);
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+}
+
+.construction-message strong {
+  color: var(--primary-blue);
+}
+
+.construction-details {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0 0 24px 0;
+}
+
+.construction-details strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.construction-timeline {
+  background: var(--bg-blue-light);
+  border-left: 4px solid var(--primary-yellow);
+  padding: 16px 20px;
+  margin: 24px 0;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.timeline-text {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.timeline-text strong {
+  color: var(--primary-blue);
+}
+
+.construction-thanks {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin: 24px 0 0 0;
+  font-weight: 500;
+}
+
+.construction-modal-footer {
+  padding: 20px 28px 28px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: center;
+}
+
+.construction-modal-button {
+  background: var(--primary-yellow);
+  color: var(--primary-blue);
+  border: none;
+  padding: 14px 40px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+}
+
+.construction-modal-button:hover {
+  background: var(--accent-yellow-light);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+}
+
+.construction-modal-button:active {
+  transform: translateY(0);
+}
+
+/* Dark mode support */
+[data-theme="dark"] .construction-modal-content {
+  background: var(--bg-dark);
+  color: var(--text-light);
+}
+
+[data-theme="dark"] .construction-message,
+[data-theme="dark"] .construction-details,
+[data-theme="dark"] .timeline-text,
+[data-theme="dark"] .construction-thanks {
+  color: var(--text-light);
+}
+
+[data-theme="dark"] .construction-timeline {
+  background: rgba(255, 255, 255, 0.05);
+  border-left-color: var(--primary-yellow);
+}
+
+[data-theme="dark"] .construction-modal-footer {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .construction-modal-content {
+    max-width: 95%;
+    margin: 10px;
+  }
+
+  .construction-modal-header {
+    padding: 20px;
+  }
+
+  .construction-modal-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .construction-modal-body {
+    padding: 24px 20px;
+  }
+
+  .construction-icon {
+    font-size: 48px;
+  }
+
+  .construction-message {
+    font-size: 1.2rem;
+  }
+
+  .construction-details {
+    font-size: 1rem;
+  }
+
+  .construction-modal-button {
+    width: 100%;
+    padding: 16px;
+  }
+}
+
+
