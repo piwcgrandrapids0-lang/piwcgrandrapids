@@ -173,6 +173,18 @@ const LocationTimes = () => {
               </ol>
               <p className="direction-time">⏱️ Approximately 20 minutes</p>
             </div>
+
+            <div className="direction-card">
+              <h3>From Kalamazoo, MI</h3>
+              <ol>
+                <li>Take US-131 North toward Grand Rapids</li>
+                <li>Continue on US-131 North for approximately 50 miles</li>
+                <li>Take Exit 76 for 28th Ave in Hudsonville</li>
+                <li>Turn right onto 28th Ave</li>
+                <li>Church will be on your right</li>
+              </ol>
+              <p className="direction-time">⏱️ Approximately 55-60 minutes</p>
+            </div>
           </div>
         </div>
       </section>
