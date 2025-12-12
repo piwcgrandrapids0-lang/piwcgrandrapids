@@ -94,7 +94,7 @@ router.get('/:id', (req, res) => {
 // Create event (admin only)
 router.post('/', authMiddleware, (req, res) => {
   try {
-    const { title, date, time, location, category, description, recurrenceType } = req.body;
+    const { title, date, time, location, category, description, recurrenceType, flyerUrl } = req.body;
 
     if (!title || !date || !time || !location) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -110,7 +110,8 @@ router.post('/', authMiddleware, (req, res) => {
       location,
       category: category || 'General',
       description: description || '',
-      recurrenceType: recurrenceType || 'one-time' // 'recurring', 'one-time', 'occasional'
+      recurrenceType: recurrenceType || 'one-time', // 'recurring', 'one-time', 'occasional'
+      flyerUrl: flyerUrl || null
     };
 
     eventsData.events.push(newEvent);

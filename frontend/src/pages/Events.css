@@ -81,6 +81,24 @@
   font-weight: 500;
 }
 
+.event-flyer {
+  width: 100%;
+  max-height: 400px;
+  overflow: hidden;
+  background: var(--bg-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.event-flyer img {
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+  object-fit: contain;
+  display: block;
+}
+
 .event-content {
   padding: 1.5rem;
 }

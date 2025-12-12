@@ -5,8 +5,86 @@
  */
 
 const { churchInfo } = require('./churchInfo');
+const fs = require('fs');
+const path = require('path');
 
-const knowledgeBase = {
+// Helper function to get content from file
+const getContent = () => {
+  try {
+    const contentFilePath = path.join(__dirname, '../data/content.json');
+    const data = fs.readFileSync(contentFilePath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading content for chatbot:', error);
+    return null;
+  }
+};
+
+// Helper function to get pastor name from content
+const getPastorName = (content) => {
+  if (content?.leadership?.leaders) {
+    const leadPastor = content.leadership.leaders.find(member => member.isLeadPastor);
+    if (leadPastor) return leadPastor.name;
+  }
+  // Also check for 'team' in case structure changes
+  if (content?.leadership?.team) {
+    const leadPastor = content.leadership.team.find(member => member.isLeadPastor);
+    if (leadPastor) return leadPastor.name;
+  }
+  return churchInfo.leadership.pastor.name; // Fallback
+};
+
+// Helper function to get pastor email from content
+const getPastorEmail = (content) => {
+  if (content?.leadership?.leaders) {
+    const leadPastor = content.leadership.leaders.find(member => member.isLeadPastor);
+    if (leadPastor && leadPastor.email) return leadPastor.email;
+  }
+  // Also check for 'team' in case structure changes
+  if (content?.leadership?.team) {
+    const leadPastor = content.leadership.team.find(member => member.isLeadPastor);
+    if (leadPastor && leadPastor.email) return leadPastor.email;
+  }
+  return churchInfo.leadership.pastor.contact; // Fallback
+};
+
+// Helper function to get phone from content
+const getPhone = (content) => {
+  return content?.contact?.phone || churchInfo.contact.phone;
+};
+
+// Helper function to get email from content
+const getEmail = (content) => {
+  return content?.contact?.email || churchInfo.contact.email;
+};
+
+// Helper function to get address from content
+const getAddress = (content) => {
+  if (content?.contact?.address) {
+    const addr = content.contact.address;
+    return `${addr.street}, ${addr.city}, ${addr.state} ${addr.zip}`;
+  }
+  return churchInfo.address.full;
+};
+
+// Helper function to get service times from content
+const getServiceTimes = (content) => {
+  return {
+    sunday: content?.services?.sunday?.time || churchInfo.services.sunday.time,
+    friday: content?.services?.friday?.time || churchInfo.services.friday.time
+  };
+};
+
+// Build knowledge base dynamically using content
+const buildKnowledgeBase = (content) => {
+  const pastorName = getPastorName(content);
+  const pastorEmail = getPastorEmail(content);
+  const phone = getPhone(content);
+  const email = getEmail(content);
+  const address = getAddress(content);
+  const serviceTimes = getServiceTimes(content);
+
+  return {
   // Service Times & Schedule
   serviceTimes: {
     keywords: ['service', 'time', 'when', 'schedule', 'worship', 'meeting'],
@@ -14,20 +92,20 @@ const knowledgeBase = {
       general: `We have two regular services:
 
 📅 **Sunday Worship Service**
-⏰ 12:30 PM
-📍 In-person at ${churchInfo.address.full}
+⏰ ${serviceTimes.sunday}
+📍 In-person at ${address}
 
 📅 **Friday Prayer Meeting**
-⏰ 7:00 PM EST
+⏰ ${serviceTimes.friday}
 💻 Online (Virtual)
 
 Come join us!`,
       
-      sunday: `Our Sunday worship service is at **12:30 PM** at ${churchInfo.address.full}. We have Spirit-filled worship, powerful preaching, and warm fellowship. Everyone is welcome!`,
+      sunday: `Our Sunday worship service is at **${serviceTimes.sunday}** at ${address}. We have Spirit-filled worship, powerful preaching, and warm fellowship. Everyone is welcome!`,
       
-      friday: `Our Friday prayer meeting is at **7:00 PM EST** and it's **online**. It's a powerful time of intercession and seeking God's face together.`,
+      friday: `Our Friday prayer meeting is at **${serviceTimes.friday}** and it's **online**. It's a powerful time of intercession and seeking God's face together.`,
       
-      online: `Yes! Our Friday prayer meetings at 7:00 PM EST are online. Our Sunday services at 12:30 PM are in-person at our Hudsonville location.`
+      online: `Yes! Our Friday prayer meetings at ${serviceTimes.friday} are online. Our Sunday services at ${serviceTimes.sunday} are in-person at our Hudsonville location.`
     }
   },
 
@@ -36,7 +114,7 @@ Come join us!`,
     keywords: ['location', 'where', 'address', 'directions', 'find', 'map'],
     answers: {
       general: `We're located at:
-📍 **${churchInfo.address.full}**
+📍 **${address}**
 
 **Directions:**
 - From Grand Rapids: Take US-196 W, exit at 28th Ave
@@ -45,7 +123,7 @@ Come join us!`,
 
 [Get Directions](${churchInfo.address.googleMapsUrl})`,
       
-      parking: `We have **free parking** available on-site at ${churchInfo.address.street}. Our parking team will help guide you to available spots when you arrive.`,
+      parking: `We have **free parking** available on-site at ${content?.contact?.address?.street || churchInfo.address.street}. Our parking team will help guide you to available spots when you arrive.`,
       
       fromGrandRapids: `From Grand Rapids: Take US-196 West toward Holland, exit at 28th Ave in Hudsonville. Turn right onto 28th Ave. The church will be on your right. About 20 minutes from downtown Grand Rapids.`
     }
@@ -144,9 +222,9 @@ We have a mix of dress styles:
     answers: {
       general: `**Get in Touch:**
 
-📞 **Phone:** ${churchInfo.contact.phone}
-📧 **Email:** ${churchInfo.contact.email}
-📍 **Address:** ${churchInfo.address.full}
+📞 **Phone:** ${phone}
+📧 **Email:** ${email}
+📍 **Address:** ${address}
 
 **Social Media:**
 📱 Instagram: ${churchInfo.contact.instagram}
@@ -160,11 +238,11 @@ We typically respond within 24-48 hours. Looking forward to hearing from you!`
   pastor: {
     keywords: ['pastor', 'minister', 'reverend', 'leader', 'priest', 'preacher'],
     answers: {
-      general: `Our Resident Pastor is **${churchInfo.leadership.pastor.name}**. He has been serving our congregation with passion and dedication, bringing powerful biblical teaching and pastoral care.
+      general: `Our Resident Pastor is **${pastorName}**. He has been serving our congregation with passion and dedication, bringing powerful biblical teaching and pastoral care.
 
 Want to connect with Pastor? 
-📧 Email: ${churchInfo.leadership.pastor.contact}
-📞 Call the church office: ${churchInfo.contact.phone}
+📧 Email: ${pastorEmail}
+📞 Call the church office: ${phone}
 
 You can also meet him in person after Sunday service!`
     }
@@ -178,7 +256,7 @@ You can also meet him in person after Sunday service!`
 
 💻 **Online** - Visit our website's Give page
 💵 **In-Person** - During Sunday service
-✉️ **Mail** - Send to: ${churchInfo.address.full}
+✉️ **Mail** - Send to: ${address}
 
 **As a first-time guest, you are NOT expected to give.** Giving is an act of worship for our members, but visitors should never feel pressured.
 
@@ -270,16 +348,25 @@ We want everyone to feel safe and comfortable during service. If you have specif
 2. Talk to Pastor or church leadership
 3. Express your interest
 
-Contact us: ${churchInfo.contact.email} | ${churchInfo.contact.phone}`
+Contact us: ${email} | ${phone}`
     }
   }
+  };
 };
 
 /**
  * Search knowledge base for relevant answer
  * Prioritizes categories with more keyword matches and better relevance
  */
-function searchKnowledge(query) {
+function searchKnowledge(query, content = null) {
+  // Get content if not provided
+  if (!content) {
+    content = getContent();
+  }
+  
+  // Build knowledge base with current content
+  const knowledgeBase = buildKnowledgeBase(content);
+  
   const lowerQuery = query.toLowerCase();
   const queryWords = lowerQuery.split(/\s+/);
   let bestMatch = null;
@@ -336,14 +423,22 @@ function searchKnowledge(query) {
 /**
  * Get all FAQs for a category
  */
-function getCategoryFAQs(category) {
+function getCategoryFAQs(category, content = null) {
+  if (!content) {
+    content = getContent();
+  }
+  const knowledgeBase = buildKnowledgeBase(content);
   return knowledgeBase[category] || null;
 }
 
 /**
  * Get quick action responses
  */
-function getQuickActions() {
+function getQuickActions(content = null) {
+  if (!content) {
+    content = getContent();
+  }
+  const knowledgeBase = buildKnowledgeBase(content);
   return {
     'Service Times': knowledgeBase.serviceTimes.answers.general,
     'Location': knowledgeBase.location.answers.general,
@@ -354,7 +449,7 @@ function getQuickActions() {
 }
 
 module.exports = {
-  knowledgeBase,
+  buildKnowledgeBase,
   searchKnowledge,
   getCategoryFAQs,
   getQuickActions

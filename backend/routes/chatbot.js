@@ -1,13 +1,82 @@
 const express = require('express');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const { searchKnowledge, getQuickActions } = require('../utils/chatbotKnowledge');
 const { churchInfo } = require('../utils/churchInfo');
 const { generateWelcomeMessage, answerWhatIf } = require('../utils/visitorHelper');
 
 const router = express.Router();
 
+// Helper function to read content
+const readContent = () => {
+  try {
+    const contentFilePath = path.join(__dirname, '../data/content.json');
+    const data = fs.readFileSync(contentFilePath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading content for chatbot:', error);
+    return null;
+  }
+};
+
+// Helper function to get pastor name from content
+const getPastorName = (content) => {
+  if (content?.leadership?.leaders) {
+    const leadPastor = content.leadership.leaders.find(member => member.isLeadPastor);
+    if (leadPastor) return leadPastor.name;
+  }
+  // Also check for 'team' in case structure changes
+  if (content?.leadership?.team) {
+    const leadPastor = content.leadership.team.find(member => member.isLeadPastor);
+    if (leadPastor) return leadPastor.name;
+  }
+  return churchInfo.leadership.pastor.name; // Fallback
+};
+
+// Helper function to get pastor email from content
+const getPastorEmail = (content) => {
+  if (content?.leadership?.leaders) {
+    const leadPastor = content.leadership.leaders.find(member => member.isLeadPastor);
+    if (leadPastor && leadPastor.email) return leadPastor.email;
+  }
+  // Also check for 'team' in case structure changes
+  if (content?.leadership?.team) {
+    const leadPastor = content.leadership.team.find(member => member.isLeadPastor);
+    if (leadPastor && leadPastor.email) return leadPastor.email;
+  }
+  return churchInfo.leadership.pastor.contact; // Fallback
+};
+
+// Helper function to get phone from content
+const getPhone = (content) => {
+  return content?.contact?.phone || churchInfo.contact.phone;
+};
+
+// Helper function to get email from content
+const getEmail = (content) => {
+  return content?.contact?.email || churchInfo.contact.email;
+};
+
+// Helper function to get address from content
+const getAddress = (content) => {
+  if (content?.contact?.address) {
+    const addr = content.contact.address;
+    return `${addr.street}, ${addr.city}, ${addr.state} ${addr.zip}`;
+  }
+  return churchInfo.address.full;
+};
+
+// Helper function to get service times from content
+const getServiceTimes = (content) => {
+  return {
+    sunday: content?.services?.sunday?.time || churchInfo.services.sunday.time,
+    friday: content?.services?.friday?.time || churchInfo.services.friday.time
+  };
+};
+
 // Enhanced function to get contextual response using knowledge base
-const getContextualResponse = (message) => {
+const getContextualResponse = (message, content) => {
   const lowerMessage = message.toLowerCase();
 
   // Check for greetings
@@ -21,8 +90,8 @@ const getContextualResponse = (message) => {
     return `**${scenario.question}**\n\n${scenario.answer}`;
   }
 
-  // Search knowledge base
-  const knowledge = searchKnowledge(message);
+  // Search knowledge base with content
+  const knowledge = searchKnowledge(message, content);
   if (knowledge) {
     return knowledge.answer;
   }
@@ -39,8 +108,19 @@ router.post('/message', async (req, res) => {
       return res.status(400).json({ error: 'Message is required' });
     }
 
+    // Read current content from file
+    const content = readContent();
+    
+    // Get dynamic values from content
+    const pastorName = getPastorName(content);
+    const pastorEmail = getPastorEmail(content);
+    const phone = getPhone(content);
+    const email = getEmail(content);
+    const address = getAddress(content);
+    const serviceTimes = getServiceTimes(content);
+
     // First, try to match with our knowledge base
-    const contextualResponse = getContextualResponse(message);
+    const contextualResponse = getContextualResponse(message, content);
     
     if (contextualResponse) {
       return res.json({ reply: contextualResponse });
@@ -58,12 +138,13 @@ router.post('/message', async (req, res) => {
 
 **CHURCH INFORMATION:**
 - Full Name: The Church of Pentecost USA, Inc. - PIWC Grand Rapids (Detroit District)
-- Location: ${churchInfo.address.full}
-- Sunday Service: ${churchInfo.services.sunday.time} (In-Person)
-- Friday Prayer Meeting: ${churchInfo.services.friday.time} (Online)
-- Pastor: ${churchInfo.leadership.pastor.name}
-- Phone: ${churchInfo.contact.phone}
-- Email: ${churchInfo.contact.email}
+- Location: ${address}
+- Sunday Service: ${serviceTimes.sunday} (In-Person)
+- Friday Prayer Meeting: ${serviceTimes.friday} (Online)
+- Pastor: ${pastorName}
+- Pastor Email: ${pastorEmail}
+- Phone: ${phone}
+- Email: ${email}
 - Instagram: ${churchInfo.contact.instagram}
 - Facebook: ${churchInfo.contact.facebook}
 
@@ -101,7 +182,7 @@ Provide a warm, helpful response. Use emojis appropriately. If you don't have sp
 
     // Default response if no match found
     res.json({
-      reply: `Thank you for your question! I'd love to help you find the answer. 😊\n\n**Quick Info:**\n📍 Location: ${churchInfo.address.full}\n⏰ Sunday Service: ${churchInfo.services.sunday.time}\n⏰ Friday Prayer: ${churchInfo.services.friday.time} (Online)\n\n**Contact Us:**\n📞 ${churchInfo.contact.phone}\n📧 ${churchInfo.contact.email}\n📱 Instagram: @piwc_grandrapids\n📘 Facebook: PIWC Grand Rapids\n\nFeel free to ask me anything about our services, location, programs, or visiting!`
+      reply: `Thank you for your question! I'd love to help you find the answer. 😊\n\n**Quick Info:**\n📍 Location: ${address}\n⏰ Sunday Service: ${serviceTimes.sunday}\n⏰ Friday Prayer: ${serviceTimes.friday} (Online)\n\n**Contact Us:**\n📞 ${phone}\n📧 ${email}\n📱 Instagram: @piwc_grandrapids\n📘 Facebook: PIWC Grand Rapids\n\nFeel free to ask me anything about our services, location, programs, or visiting!`
     });
 
   } catch (error) {

@@ -146,6 +146,17 @@ const Events = () => {
                       </span>
                     )}
                   </div>
+                  {event.flyerUrl && (
+                    <div className="event-flyer">
+                      <img 
+                        src={event.flyerUrl.startsWith('http') ? event.flyerUrl : `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}${event.flyerUrl}`}
+                        alt={`${event.title} Flyer`}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
                   <div className="event-content">
                     <h3>{event.title}</h3>
                     <div className="event-details">

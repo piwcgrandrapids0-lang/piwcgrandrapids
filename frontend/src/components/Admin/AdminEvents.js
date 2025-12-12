@@ -13,8 +13,10 @@ const AdminEvents = () => {
     location: '',
     description: '',
     category: 'general',
-    recurrenceType: 'one-time'
+    recurrenceType: 'one-time',
+    flyerUrl: ''
   });
+  const [uploading, setUploading] = useState(false);
 
   const categories = [
     { id: 'general', name: 'General Event' },
@@ -42,6 +44,34 @@ const AdminEvents = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileUpload = async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('uploadType', 'images'); // Store flyers in images folder
+
+    setUploading(true);
+    try {
+      const response = await axios.post('/api/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (response.data.url) {
+        setFormData(prev => ({ ...prev, flyerUrl: response.data.url }));
+        alert(`Flyer uploaded successfully!`);
+        return response.data.url;
+      } else {
+        alert(`Upload failed: ${response.data.error}`);
+        return null;
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert(`Upload failed: ${error.message}`);
+      return null;
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -74,7 +104,8 @@ const AdminEvents = () => {
       location: event.location,
       description: event.description,
       category: event.category,
-      recurrenceType: event.recurrenceType || 'one-time'
+      recurrenceType: event.recurrenceType || 'one-time',
+      flyerUrl: event.flyerUrl || ''
     });
     setShowForm(true);
   };
@@ -100,7 +131,8 @@ const AdminEvents = () => {
       location: '',
       description: '',
       category: 'general',
-      recurrenceType: 'one-time'
+      recurrenceType: 'one-time',
+      flyerUrl: ''
     });
     setEditingEvent(null);
     setShowForm(false);
@@ -207,6 +239,59 @@ const AdminEvents = () => {
               />
             </div>
 
+            <div className="form-group">
+              <label>Event Flyer</label>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <input
+                    type="text"
+                    name="flyerUrl"
+                    value={formData.flyerUrl}
+                    onChange={handleChange}
+                    placeholder="/uploads/images/event-flyer.jpg"
+                  />
+                  <small>Flyer URL (auto-filled after upload)</small>
+                </div>
+                <div>
+                  <label 
+                    htmlFor="flyerUpload" 
+                    className="btn btn-secondary" 
+                    style={{ cursor: 'pointer', margin: 0 }}
+                  >
+                    {uploading ? '⏳ Uploading...' : '📤 Upload Flyer'}
+                  </label>
+                  <input
+                    id="flyerUpload"
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={async (e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const url = await handleFileUpload(file);
+                        if (url) {
+                          setFormData(prev => ({ ...prev, flyerUrl: url }));
+                        }
+                      }
+                    }}
+                    disabled={uploading}
+                  />
+                </div>
+              </div>
+              {formData.flyerUrl && (
+                <div style={{ marginTop: '1rem' }}>
+                  <img 
+                    src={formData.flyerUrl.startsWith('http') ? formData.flyerUrl : `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}${formData.flyerUrl}`}
+                    alt="Flyer Preview" 
+                    style={{ maxWidth: '300px', maxHeight: '400px', borderRadius: '8px', objectFit: 'contain', border: '1px solid #ddd' }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
             <div className="form-actions">
               <button type="button" onClick={resetForm} className="btn btn-secondary">
                 Cancel
@@ -253,6 +338,21 @@ const AdminEvents = () => {
                     </span>
                   </p>
                   <p><strong>Description:</strong> {event.description}</p>
+                  {event.flyerUrl && (
+                    <div style={{ marginTop: '1rem' }}>
+                      <strong>📄 Flyer:</strong>
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <img 
+                          src={event.flyerUrl.startsWith('http') ? event.flyerUrl : `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}${event.flyerUrl}`}
+                          alt={`${event.title} Flyer`}
+                          style={{ maxWidth: '200px', maxHeight: '250px', borderRadius: '4px', objectFit: 'contain', border: '1px solid #ddd' }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="event-actions">
                   <button onClick={() => handleEdit(event)} className="btn btn-secondary btn-small">
