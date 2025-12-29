@@ -23,6 +23,19 @@
   gap: 2rem;
 }
 
+.add-year-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 2px dashed #667eea;
+}
+
+.add-year-form {
+  display: flex;
+  align-items: flex-end;
+}
+
 .theme-card {
   background: white;
   border-radius: 12px;
@@ -31,12 +44,43 @@
   border-left: 4px solid #667eea;
 }
 
-.theme-card h3 {
-  font-size: 1.5rem;
-  color: #333;
+.theme-card-header {
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
   border-bottom: 2px solid #f0f0f0;
+}
+
+.theme-card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.theme-card-title-row h3 {
+  font-size: 1.5rem;
+  color: #333;
+  margin: 0;
+}
+
+.theme-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.year-edit-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.theme-card h3 {
+  font-size: 1.5rem;
+  color: #333;
+  margin: 0;
 }
 
 .form-group {
@@ -109,6 +153,58 @@
   text-align: center;
   padding: 3rem;
   color: #666;
+}
+
+.flyer-upload-container {
+  margin-top: 0.5rem;
+}
+
+.flyer-preview-container {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.flyer-preview {
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: #f9f9f9;
+  padding: 0.5rem;
+}
+
+.flyer-upload-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-small {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.3s ease;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #c82333;
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
