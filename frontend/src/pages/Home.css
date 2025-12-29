@@ -152,7 +152,24 @@
 
 .welcome-image {
   width: 100%;
-  height: 400px;
+  min-height: 300px;
+  max-height: 700px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #f5f5f5;
+}
+
+.welcome-image img {
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 12px;
+  display: block;
 }
 
 .placeholder-image,
@@ -394,10 +411,36 @@
   flex-wrap: wrap;
 }
 
+/* Theme Section */
+.theme-content-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: center;
+}
+
+.theme-flyer-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.theme-flyer-container img {
+  max-width: 100%;
+  max-height: 500px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
 /* Responsive Design */
 @media (max-width: 968px) {
   .welcome-content,
   .sermon-container {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .theme-content-wrapper {
     grid-template-columns: 1fr;
     gap: 2rem;
   }
