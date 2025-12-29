@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
+const azureStorage = require('./utils/azureStorage');
 const authRoutes = require('./routes/auth');
 const chatbotRoutes = require('./routes/chatbot');
 const contactRoutes = require('./routes/contact');
@@ -90,15 +91,114 @@ const videoUpload = multer({
   }
 });
 
+const documentUpload = multer({ 
+  storage: storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit for documents
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /pdf|ppt|pptx|jpg|jpeg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = file.mimetype === 'application/pdf' || 
+                     file.mimetype.startsWith('application/vnd.ms-powerpoint') ||
+                     file.mimetype.startsWith('application/vnd.openxmlformats-officedocument.presentationml') ||
+                     file.mimetype.startsWith('image/');
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only PDF, PowerPoint, or image files are allowed'));
+    }
+  }
+});
+
 // Image upload endpoint
-app.post('/api/upload', imageUpload.single('image'), (req, res) => {
+app.post('/api/upload', imageUpload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
     
     const uploadType = req.body.uploadType || 'images';
-    const fileUrl = `/uploads/${uploadType}/${req.file.filename}`;
+    const isProduction = process.env.NODE_ENV === 'production';
+    let fileUrl;
+
+    // Try Azure Blob Storage first
+    if (azureStorage.isConfigured()) {
+      try {
+        // Read file from disk into buffer for Azure upload
+        const fileBuffer = fs.readFileSync(req.file.path);
+        
+        const uploadResult = await azureStorage.uploadImage(
+          fileBuffer,
+          req.file.originalname,
+          req.file.mimetype,
+          uploadType
+        );
+        fileUrl = uploadResult.url;
+        console.log('Image uploaded to Azure Blob Storage:', uploadResult.url);
+        
+        // Delete local file after successful Azure upload
+        fs.unlinkSync(req.file.path);
+      } catch (azureError) {
+        console.error('Azure upload failed:', azureError.message);
+        console.error('Error stack:', azureError.stack);
+        
+        // Log more details about the error
+        if (azureError.message) {
+          console.error('Error message:', azureError.message);
+        }
+        if (azureError.code) {
+          console.error('Error code:', azureError.code);
+        }
+        
+        // In production, try to use local storage as fallback (with warning)
+        // This allows the app to continue working even if Azure Storage has issues
+        console.warn('Falling back to local storage due to Azure Storage error');
+        console.warn('NOTE: Local storage files will be lost on deployment!');
+        
+        try {
+          const uploadsDir = path.join(__dirname, 'uploads', uploadType);
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+          fileUrl = `/uploads/${uploadType}/${req.file.filename}`;
+          console.log('Saved to local storage:', fileUrl);
+        } catch (localError) {
+          console.error('Local storage also failed:', localError.message);
+          return res.status(500).json({ 
+            error: 'Failed to upload image. Both Azure Storage and local storage failed.',
+            azureError: azureError.message,
+            localError: localError.message,
+            suggestion: 'Please check Azure Storage configuration in Azure App Service App Settings.'
+          });
+        }
+      }
+    } else {
+      // Azure not configured - check if connection string exists
+      const hasConnectionString = !!process.env.AZURE_STORAGE_CONNECTION_STRING;
+      console.warn(`Azure Storage not configured. Connection string present: ${hasConnectionString}`);
+      
+      if (isProduction && hasConnectionString) {
+        console.error('Azure Storage connection string is set but initialization failed!');
+        console.error('Please check the connection string format and Azure Storage account status.');
+      }
+      
+      // Use local storage as fallback
+      console.warn('Using local storage (files will be lost on deployment)');
+      try {
+        const uploadsDir = path.join(__dirname, 'uploads', uploadType);
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        fileUrl = `/uploads/${uploadType}/${req.file.filename}`;
+        console.log('Saved to local storage:', fileUrl);
+      } catch (localError) {
+        console.error('Local storage failed:', localError.message);
+        return res.status(500).json({ 
+          error: 'Failed to upload image. Azure Storage is not configured and local storage failed.',
+          suggestion: 'Please set AZURE_STORAGE_CONNECTION_STRING in Azure App Service App Settings.'
+        });
+      }
+    }
     
     res.json({ 
       success: true, 
@@ -128,6 +228,29 @@ app.post('/api/upload-video', videoUpload.single('video'), (req, res) => {
     });
   } catch (error) {
     console.error('Video upload error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Document/Slides upload endpoint
+app.post('/api/upload-document', documentUpload.single('document'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    
+    const uploadType = req.body.uploadType || 'documents';
+    const fileUrl = `/uploads/${uploadType}/${req.file.filename}`;
+    
+    res.json({ 
+      success: true, 
+      url: fileUrl,
+      filename: req.file.filename,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    });
+  } catch (error) {
+    console.error('Document upload error:', error);
     res.status(500).json({ error: error.message });
   }
 });

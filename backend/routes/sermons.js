@@ -49,9 +49,12 @@ const writeSermons = (data) => {
 router.get('/', (req, res) => {
   try {
     const sermonsData = readSermons();
-    const sortedSermons = [...sermonsData.sermons].sort(
-      (a, b) => new Date(b.date) - new Date(a.date)
-    );
+    // Sort: latest first, then by date
+    const sortedSermons = [...sermonsData.sermons].sort((a, b) => {
+      if (a.isLatest && !b.isLatest) return -1;
+      if (!a.isLatest && b.isLatest) return 1;
+      return new Date(b.date) - new Date(a.date);
+    });
     res.json(sortedSermons);
   } catch (error) {
     console.error('Error fetching sermons:', error);
@@ -79,13 +82,20 @@ router.get('/:id', (req, res) => {
 // Create sermon (admin only)
 router.post('/', authMiddleware, (req, res) => {
   try {
-    const { title, speaker, date, series, description, videoUrl, thumbnail } = req.body;
+    const { title, speaker, date, series, description, videoUrl, thumbnail, isLatest, messageType, textContent, slidesUrl } = req.body;
 
     if (!title || !speaker || !date) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     const sermonsData = readSermons();
+
+    // If marking as latest, unmark all other sermons
+    if (isLatest) {
+      sermonsData.sermons.forEach(sermon => {
+        sermon.isLatest = false;
+      });
+    }
 
     const newSermon = {
       id: sermonsData.nextId++,
@@ -96,6 +106,10 @@ router.post('/', authMiddleware, (req, res) => {
       description: description || '',
       videoUrl: videoUrl || '',
       thumbnail: thumbnail || '',
+      isLatest: isLatest || false,
+      messageType: messageType || 'video', // 'video', 'text', or 'slides'
+      textContent: textContent || '',
+      slidesUrl: slidesUrl || '',
       createdAt: new Date().toISOString()
     };
 
@@ -112,11 +126,21 @@ router.post('/', authMiddleware, (req, res) => {
 router.put('/:id', authMiddleware, (req, res) => {
   try {
     const { id } = req.params;
+    const { isLatest } = req.body;
     const sermonsData = readSermons();
     const index = sermonsData.sermons.findIndex(s => s.id === parseInt(id));
 
     if (index === -1) {
       return res.status(404).json({ error: 'Sermon not found' });
+    }
+
+    // If marking as latest, unmark all other sermons
+    if (isLatest) {
+      sermonsData.sermons.forEach((sermon, i) => {
+        if (i !== index) {
+          sermon.isLatest = false;
+        }
+      });
     }
 
     sermonsData.sermons[index] = {
