@@ -7,14 +7,19 @@ const AdminSermons = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingSermon, setEditingSermon] = useState(null);
   const [videoSource, setVideoSource] = useState('youtube'); // 'youtube' or 'upload'
+  const [messageType, setMessageType] = useState('video'); // 'video', 'text', or 'slides'
   const [uploading, setUploading] = useState(false);
+  const [uploadingSlides, setUploadingSlides] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     speaker: '',
     date: '',
     series: '',
     description: '',
-    videoUrl: ''
+    videoUrl: '',
+    textContent: '',
+    slidesUrl: '',
+    isLatest: false
   });
 
   useEffect(() => {
@@ -62,6 +67,35 @@ const AdminSermons = () => {
       alert(`Upload failed: ${error.message}`);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleSlidesUpload = async (file) => {
+    if (!file) return;
+    
+    setUploadingSlides(true);
+    const uploadFormData = new FormData();
+    uploadFormData.append('document', file);
+    uploadFormData.append('uploadType', 'slides');
+    
+    try {
+      const response = await axios.post('/api/upload-document', uploadFormData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      if (response.data.success) {
+        alert(`Slides uploaded successfully! (${(response.data.size / (1024 * 1024)).toFixed(2)} MB)`);
+        setFormData(prev => ({ ...prev, slidesUrl: response.data.url }));
+      } else {
+        alert(`Upload failed: ${response.data.error}`);
+      }
+    } catch (error) {
+      console.error('Slides upload error:', error);
+      alert(`Upload failed: ${error.message}`);
+    } finally {
+      setUploadingSlides(false);
     }
   };
 
@@ -145,10 +179,16 @@ const AdminSermons = () => {
     try {
       const url = editingSermon ? `/api/sermons/${editingSermon.id}` : '/api/sermons';
       
+      const payload = {
+        ...formData,
+        messageType,
+        videoUrl: messageType === 'video' ? videoUrl : ''
+      };
+      
       if (editingSermon) {
-        await axios.put(url, { ...formData, videoUrl });
+        await axios.put(url, payload);
       } else {
-        await axios.post(url, { ...formData, videoUrl });
+        await axios.post(url, payload);
       }
       
       fetchSermons();
@@ -162,13 +202,17 @@ const AdminSermons = () => {
 
   const handleEdit = (sermon) => {
     setEditingSermon(sermon);
+    setMessageType(sermon.messageType || 'video');
     setFormData({
       title: sermon.title,
       speaker: sermon.speaker,
       date: sermon.date,
       series: sermon.series,
       description: sermon.description,
-      videoUrl: sermon.videoUrl
+      videoUrl: sermon.videoUrl || '',
+      textContent: sermon.textContent || '',
+      slidesUrl: sermon.slidesUrl || '',
+      isLatest: sermon.isLatest || false
     });
     setShowForm(true);
   };
@@ -193,8 +237,12 @@ const AdminSermons = () => {
       date: '',
       series: '',
       description: '',
-      videoUrl: ''
+      videoUrl: '',
+      textContent: '',
+      slidesUrl: '',
+      isLatest: false
     });
+    setMessageType('video');
     setEditingSermon(null);
     setShowForm(false);
   };
@@ -258,83 +306,192 @@ const AdminSermons = () => {
                   placeholder="e.g., Faith Series"
                 />
               </div>
+              <div className="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    name="isLatest"
+                    checked={formData.isLatest || false}
+                    onChange={(e) => setFormData(prev => ({ ...prev, isLatest: e.target.checked }))}
+                  />
+                  {' '}⭐ Mark as Latest Message
+                </label>
+                <small>Only one sermon can be marked as latest</small>
+              </div>
             </div>
 
             <div className="form-group">
-              <label>Video Source *</label>
-              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+              <label>Message Type *</label>
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                   <input
                     type="radio"
-                    value="youtube"
-                    checked={videoSource === 'youtube'}
-                    onChange={(e) => setVideoSource(e.target.value)}
+                    value="video"
+                    checked={messageType === 'video'}
+                    onChange={(e) => setMessageType(e.target.value)}
                     style={{ marginRight: '0.5rem' }}
                   />
-                  📺 YouTube URL
+                  📺 Video
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                   <input
                     type="radio"
-                    value="upload"
-                    checked={videoSource === 'upload'}
-                    onChange={(e) => setVideoSource(e.target.value)}
+                    value="text"
+                    checked={messageType === 'text'}
+                    onChange={(e) => setMessageType(e.target.value)}
                     style={{ marginRight: '0.5rem' }}
                   />
-                  📤 Upload Video File
+                  📝 Text Message
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    value="slides"
+                    checked={messageType === 'slides'}
+                    onChange={(e) => setMessageType(e.target.value)}
+                    style={{ marginRight: '0.5rem' }}
+                  />
+                  📊 Slides
                 </label>
               </div>
 
-              {videoSource === 'youtube' ? (
+              {messageType === 'video' && (
                 <>
-                  <input
-                    type="url"
-                    name="videoUrl"
-                    value={formData.videoUrl}
-                    onChange={handleChange}
-                    required
-                    placeholder="https://www.youtube.com/watch?v=..."
-                  />
-                  <small>Paste any YouTube URL - it will be automatically converted to embed format</small>
+                  <label>Video Source</label>
+                  <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        value="youtube"
+                        checked={videoSource === 'youtube'}
+                        onChange={(e) => setVideoSource(e.target.value)}
+                        style={{ marginRight: '0.5rem' }}
+                      />
+                      📺 YouTube URL
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        value="upload"
+                        checked={videoSource === 'upload'}
+                        onChange={(e) => setVideoSource(e.target.value)}
+                        style={{ marginRight: '0.5rem' }}
+                      />
+                      📤 Upload Video File
+                    </label>
+                  </div>
+
+                  {videoSource === 'youtube' ? (
+                    <>
+                      <input
+                        type="url"
+                        name="videoUrl"
+                        value={formData.videoUrl}
+                        onChange={handleChange}
+                        required={messageType === 'video'}
+                        placeholder="https://www.youtube.com/watch?v=..."
+                      />
+                      <small>Paste any YouTube URL - it will be automatically converted to embed format</small>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                          <input
+                            type="text"
+                            value={formData.videoUrl}
+                            onChange={(e) => setFormData(prev => ({ ...prev, videoUrl: e.target.value }))}
+                            placeholder="/uploads/videos/sermon.mp4"
+                            readOnly={uploading}
+                          />
+                          <small>Video URL (auto-filled after upload)</small>
+                        </div>
+                        <div>
+                          <label 
+                            htmlFor="videoFileUpload" 
+                            className="btn btn-secondary" 
+                            style={{ cursor: 'pointer', margin: 0 }}
+                          >
+                            {uploading ? '⏳ Uploading...' : '📤 Upload Video'}
+                          </label>
+                          <input
+                            id="videoFileUpload"
+                            type="file"
+                            accept="video/*"
+                            style={{ display: 'none' }}
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (file) {
+                                handleVideoUpload(file);
+                              }
+                            }}
+                            disabled={uploading}
+                          />
+                        </div>
+                      </div>
+                      <small style={{ display: 'block', marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
+                        ⚠️ Maximum file size: 100MB. Supported formats: MP4, MOV, AVI, WMV, FLV, MKV, WEBM
+                      </small>
+                    </>
+                  )}
                 </>
-              ) : (
+              )}
+
+              {messageType === 'text' && (
                 <>
+                  <label>Message Text *</label>
+                  <textarea
+                    name="textContent"
+                    value={formData.textContent}
+                    onChange={handleChange}
+                    required={messageType === 'text'}
+                    rows="12"
+                    placeholder="Enter your message text here. You can use line breaks for paragraphs..."
+                    style={{ fontFamily: 'inherit', fontSize: '1rem' }}
+                  />
+                  <small>Enter the full text of your message. This will replace the video on the home page.</small>
+                </>
+              )}
+
+              {messageType === 'slides' && (
+                <>
+                  <label>Slides File *</label>
                   <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                     <div style={{ flex: 1 }}>
                       <input
                         type="text"
-                        value={formData.videoUrl}
-                        onChange={(e) => setFormData(prev => ({ ...prev, videoUrl: e.target.value }))}
-                        placeholder="/uploads/videos/sermon.mp4"
-                        readOnly={uploading}
+                        value={formData.slidesUrl}
+                        onChange={(e) => setFormData(prev => ({ ...prev, slidesUrl: e.target.value }))}
+                        placeholder="/uploads/slides/sermon.pdf"
+                        readOnly={uploadingSlides}
                       />
-                      <small>Video URL (auto-filled after upload)</small>
+                      <small>Slides URL (auto-filled after upload)</small>
                     </div>
                     <div>
                       <label 
-                        htmlFor="videoFileUpload" 
+                        htmlFor="slidesFileUpload" 
                         className="btn btn-secondary" 
                         style={{ cursor: 'pointer', margin: 0 }}
                       >
-                        {uploading ? '⏳ Uploading...' : '📤 Upload Video'}
+                        {uploadingSlides ? '⏳ Uploading...' : '📤 Upload Slides'}
                       </label>
                       <input
-                        id="videoFileUpload"
+                        id="slidesFileUpload"
                         type="file"
-                        accept="video/*"
+                        accept=".pdf,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp"
                         style={{ display: 'none' }}
                         onChange={(e) => {
                           const file = e.target.files[0];
                           if (file) {
-                            handleVideoUpload(file);
+                            handleSlidesUpload(file);
                           }
                         }}
-                        disabled={uploading}
+                        disabled={uploadingSlides}
                       />
                     </div>
                   </div>
                   <small style={{ display: 'block', marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
-                    ⚠️ Maximum file size: 100MB. Supported formats: MP4, MOV, AVI, WMV, FLV, MKV, WEBM
+                    ⚠️ Maximum file size: 50MB. Supported formats: PDF, PowerPoint (PPT, PPTX), or Images (JPG, PNG, GIF, WEBP)
                   </small>
                 </>
               )}
@@ -375,20 +532,36 @@ const AdminSermons = () => {
             {sermons.map(sermon => (
               <div key={sermon.id} className="sermon-card">
                 <div className="sermon-video">
-                  <iframe
-                    src={sermon.videoUrl}
-                    title={sermon.title}
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
+                  {sermon.videoUrl ? (
+                    <iframe
+                      src={`${sermon.videoUrl}?feature=oembed&rel=0&modestbranding=1`}
+                      title={sermon.title}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      referrerPolicy="strict-origin-when-cross-origin"
+                    ></iframe>
+                  ) : (
+                    <div style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      background: '#f0f0f0',
+                      color: '#666'
+                    }}>
+                      <p>Video URL not available</p>
+                    </div>
+                  )}
                 </div>
                 <div className="sermon-info">
-                  <h4>{sermon.title}</h4>
+                  <h4>{sermon.isLatest ? '⭐ ' : ''}{sermon.title}</h4>
                   <p className="sermon-meta">
                     <strong>🎤 Speaker:</strong> {sermon.speaker}<br />
                     <strong>📅 Date:</strong> {new Date(sermon.date).toLocaleDateString()}<br />
                     {sermon.series && <><strong>📚 Series:</strong> {sermon.series}<br /></>}
+                    {sermon.isLatest && <><strong>⭐ Latest Message</strong><br /></>}
                   </p>
                   <p className="sermon-description">{sermon.description}</p>
                   <div className="sermon-actions">
