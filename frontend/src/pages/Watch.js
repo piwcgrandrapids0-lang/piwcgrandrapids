@@ -64,122 +64,185 @@ const Watch = () => {
 
           {sermons.length > 0 ? (
             <>
-              {/* Featured Sermon */}
+              {/* Featured Sermon - Show latest or first sermon */}
+              {(() => {
+                const latestSermon = sermons.find(s => s.isLatest) || sermons[0];
+                return (
               <div className="featured-sermon">
                 <div className="featured-video">
-                  {sermons[0].videoUrl ? (
+                  {((latestSermon.messageType === 'video' || !latestSermon.messageType) && latestSermon.videoUrl) ? (
                     <>
                       <iframe
                         width="100%"
                         height="100%"
-                        src={`${sermons[0].videoUrl}?feature=oembed&rel=0&modestbranding=1`}
-                        title={sermons[0].title}
+                        src={`${latestSermon.videoUrl}?feature=oembed&rel=0&modestbranding=1`}
+                        title={latestSermon.title}
                         frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowFullScreen
                         referrerPolicy="strict-origin-when-cross-origin"
                       ></iframe>
-                      <div className="video-error-message" style={{ 
-                        display: 'none', 
-                        padding: '2rem', 
-                        textAlign: 'center',
-                        background: '#f8f9fa',
-                        borderRadius: '8px',
-                        marginTop: '1rem'
-                      }}>
-                        <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: '#dc3545' }}>
-                          ⚠️ Error 153: Video Unavailable
-                        </p>
-                        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
-                          This video may be private, deleted, or embedding may be disabled by the owner.
-                        </p>
-                        <p style={{ fontSize: '0.85rem', color: '#999', marginBottom: '1rem' }}>
-                          Video ID: {sermons[0].videoUrl.match(/embed\/([^?]+)/)?.[1] || 'Unknown'}
-                        </p>
-                        <a 
-                          href={sermons[0].videoUrl.replace('/embed/', '/watch?v=')} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="btn btn-primary"
-                          style={{ display: 'inline-block', marginRight: '1rem' }}
-                        >
-                          Try on YouTube
-                        </a>
-                        <a 
-                          href={`https://www.youtube.com/watch?v=dQw4w9WgXcQ`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ fontSize: '0.85rem', color: '#667eea', textDecoration: 'underline' }}
-                        >
-                          Test with working video
-                        </a>
-                      </div>
                     </>
+                  ) : latestSermon.messageType === 'text' && latestSermon.textContent ? (
+                    <div style={{ 
+                      padding: '2rem', 
+                      background: 'white', 
+                      borderRadius: '8px',
+                      height: '100%',
+                      overflowY: 'auto',
+                      lineHeight: '1.8',
+                      color: 'var(--text-primary)'
+                    }}>
+                      <div style={{ whiteSpace: 'pre-wrap' }}>{latestSermon.textContent}</div>
+                    </div>
+                  ) : latestSermon.messageType === 'slides' && latestSermon.slidesUrl ? (
+                    <div style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      background: '#f5f5f5',
+                      borderRadius: '8px'
+                    }}>
+                      {latestSermon.slidesUrl.endsWith('.pdf') ? (
+                        <iframe
+                          src={(() => {
+                            const url = latestSermon.slidesUrl;
+                            if (!url) return '';
+                            if (url.startsWith('http')) return url;
+                            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+                            return `${API_URL}${url}`;
+                          })()}
+                          width="100%"
+                          height="100%"
+                          style={{ border: 'none', borderRadius: '8px' }}
+                          title="Sermon Slides"
+                        ></iframe>
+                      ) : (
+                        <img 
+                          src={(() => {
+                            const url = latestSermon.slidesUrl;
+                            if (!url) return '';
+                            if (url.startsWith('http')) return url;
+                            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+                            return `${API_URL}${url}`;
+                          })()}
+                          alt="Sermon Slides"
+                          style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                        />
+                      )}
+                    </div>
                   ) : (
                     <div className="placeholder-video">
-                      <p>Video not available</p>
+                      <p>Content not available</p>
                     </div>
                   )}
                 </div>
                 <div className="featured-info">
-                  <span className="sermon-series">{sermons[0].series}</span>
-                  <h3>{sermons[0].title}</h3>
+                  <span className="sermon-series">{latestSermon.series}</span>
+                  <h3>{latestSermon.isLatest ? '⭐ ' : ''}{latestSermon.title}</h3>
                   <div className="sermon-meta">
                     <span className="sermon-speaker">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                       </svg>
-                      {sermons[0].speaker}
+                      {latestSermon.speaker}
                     </span>
                     <span className="sermon-date">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V9h14v10z"/>
                       </svg>
-                      {formatDate(sermons[0].date)}
+                      {formatDate(latestSermon.date)}
                     </span>
                   </div>
-                  <p className="sermon-description">{sermons[0].description}</p>
+                  <p className="sermon-description">{latestSermon.description}</p>
+                  {latestSermon.messageType === 'slides' && latestSermon.slidesUrl && (
+                    <a 
+                      href={(() => {
+                        const url = latestSermon.slidesUrl;
+                        if (!url) return '';
+                        if (url.startsWith('http')) return url;
+                        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+                        return `${API_URL}${url}`;
+                      })()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-secondary"
+                      style={{ marginTop: '1rem', display: 'inline-block' }}
+                    >
+                      📥 Download Slides
+                    </a>
+                  )}
                 </div>
               </div>
+                );
+              })()}
 
               {/* Sermon Grid */}
               <div className="sermons-grid">
-                {sermons.slice(1).map((sermon) => (
+                {sermons.filter(s => !s.isLatest).map((sermon) => (
                   <div key={sermon.id} className="sermon-card">
                     <div className="sermon-thumbnail">
-                      {sermon.videoUrl ? (
-                        <>
-                          <iframe
-                            width="100%"
-                            height="100%"
-                            src={`${sermon.videoUrl}?feature=oembed&rel=0&modestbranding=1`}
-                            title={sermon.title}
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                            allowFullScreen
-                            referrerPolicy="strict-origin-when-cross-origin"
-                          ></iframe>
-                          <div className="placeholder-thumbnail" style={{ display: 'none' }}>
-                            <div style={{ textAlign: 'center', padding: '1rem' }}>
-                              <p style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>⚠️ Video Not Available</p>
-                              <a 
-                                href={sermon.videoUrl.replace('/embed/', '/watch?v=')} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                style={{ 
-                                  fontSize: '0.85rem',
-                                  color: '#667eea',
-                                  textDecoration: 'underline'
-                                }}
-                              >
-                                Watch on YouTube
-                              </a>
-                            </div>
+                      {((sermon.messageType === 'video' || !sermon.messageType) && sermon.videoUrl) ? (
+                        <iframe
+                          width="100%"
+                          height="100%"
+                          src={`${sermon.videoUrl}?feature=oembed&rel=0&modestbranding=1`}
+                          title={sermon.title}
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          allowFullScreen
+                          referrerPolicy="strict-origin-when-cross-origin"
+                        ></iframe>
+                      ) : sermon.messageType === 'text' && sermon.textContent ? (
+                        <div style={{ 
+                          padding: '1rem', 
+                          background: 'white', 
+                          height: '100%',
+                          overflow: 'hidden',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          textAlign: 'center',
+                          color: 'var(--text-primary)'
+                        }}>
+                          <div>
+                            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📝</div>
+                            <p style={{ fontSize: '0.9rem', margin: 0 }}>Text Message</p>
                           </div>
-                        </>
+                        </div>
+                      ) : sermon.messageType === 'slides' && sermon.slidesUrl ? (
+                        <div style={{ 
+                          width: '100%', 
+                          height: '100%', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          background: '#f5f5f5'
+                        }}>
+                          {sermon.slidesUrl.endsWith('.pdf') ? (
+                            <div style={{ textAlign: 'center', padding: '1rem' }}>
+                              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📊</div>
+                              <p style={{ fontSize: '0.9rem', margin: 0 }}>PDF Slides</p>
+                            </div>
+                          ) : (
+                            <img 
+                              src={(() => {
+                                const url = sermon.slidesUrl;
+                                if (!url) return '';
+                                if (url.startsWith('http')) return url;
+                                const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+                                return `${API_URL}${url}`;
+                              })()}
+                              alt="Sermon Slides"
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          )}
+                        </div>
                       ) : (
                         <div className="placeholder-thumbnail">
-                          <p>Video not available</p>
+                          <p>Content not available</p>
                         </div>
                       )}
                     </div>
