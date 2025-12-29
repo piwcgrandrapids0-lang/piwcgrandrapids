@@ -1,31 +1,58 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from '../config/axios';
+import axiosInstance from '../config/axios';
 import './Home.css';
 
 const Home = () => {
   const [content, setContent] = useState(null);
+  const [latestSermon, setLatestSermon] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchContent = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get('/api/content');
-        setContent(response.data);
+        // Fetch content and sermons in parallel
+        const [contentResponse, sermonsResponse] = await Promise.all([
+          axiosInstance.get('/api/content'),
+          axiosInstance.get('/api/sermons')
+        ]);
+        
+        setContent(contentResponse.data);
+        
+        // Find the sermon marked as latest
+        const latest = sermonsResponse.data.find(s => s.isLatest) || sermonsResponse.data[0] || null;
+        setLatestSermon(latest);
+        
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching content:', error);
+        console.error('Error fetching data:', error);
         setLoading(false);
       }
     };
-    fetchContent();
+    fetchData();
   }, []);
 
   // Helper to get full image URL for uploaded images
   const getImageUrl = (url) => {
     if (!url) return url;
-    if (url.startsWith('/uploads/')) {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+    // If it's already a full URL (from Azure Blob Storage), return as-is
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    // Skip static asset paths (they don't exist in deployed app - should be uploaded)
+    if (url.startsWith('/assets/')) {
+      console.warn('Static asset path detected:', url, '- This image should be uploaded via admin dashboard');
+      // Return empty to trigger placeholder
+      return '';
+    }
+    // Otherwise, prepend API URL for local uploads
+    if (url.startsWith('/uploads/') || url.startsWith('/')) {
+      // Get API URL from axios instance or fallback
+      let API_URL = axiosInstance.defaults.baseURL;
+      // In production, always use the Azure API URL if not localhost
+      if (typeof window !== 'undefined' && !window.location.origin.includes('localhost')) {
+        API_URL = 'https://piwcgr-api.azurewebsites.net';
+      } else if (!API_URL || API_URL === 'http://localhost:5001') {
+        API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+      }
       return `${API_URL}${url}`;
     }
     return url;
@@ -123,7 +150,6 @@ const Home = () => {
                 <img 
                   src={getImageUrl(content.welcomeHome.imageUrl)} 
                   alt="Church Building" 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }}
                   onError={(e) => {
                     console.log('Failed to load welcome image:', content.welcomeHome.imageUrl);
                     e.target.style.display = 'none';
@@ -148,29 +174,63 @@ const Home = () => {
               if (!theme?.active) return null;
               
               return (
-                <div key={year} className="theme-card" style={{ 
-                  background: 'rgba(255, 255, 255, 0.1)', 
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '16px',
-                  padding: '3rem',
-                  textAlign: 'center',
-                  border: '1px solid rgba(255, 255, 255, 0.2)'
+                <div key={year} className="theme-content-wrapper" style={{
+                  display: 'grid',
+                  gridTemplateColumns: theme.flyerUrl ? '1fr 1fr' : '1fr',
+                  gap: '3rem',
+                  alignItems: 'center'
                 }}>
-                  <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '2px' }}>
-                    {year} Annual Theme
+                  <div className="theme-card" style={{ 
+                    background: 'rgba(255, 255, 255, 0.1)', 
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '16px',
+                    padding: '3rem',
+                    textAlign: 'center',
+                    border: '1px solid rgba(255, 255, 255, 0.2)'
+                  }}>
+                    <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                      {year} Annual Theme
+                    </div>
+                    <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: 'bold' }}>
+                      {theme.title}
+                    </h2>
+                    {theme.scripture && (
+                      <p style={{ fontSize: '1.2rem', marginBottom: '1.5rem', fontStyle: 'italic', opacity: 0.95 }}>
+                        {theme.scripture}
+                      </p>
+                    )}
+                    {theme.description && (
+                      <p style={{ fontSize: '1.1rem', lineHeight: '1.8', maxWidth: '800px', margin: '0 auto', opacity: 0.9 }}>
+                        {theme.description}
+                      </p>
+                    )}
                   </div>
-                  <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: 'bold' }}>
-                    {theme.title}
-                  </h2>
-                  {theme.scripture && (
-                    <p style={{ fontSize: '1.2rem', marginBottom: '1.5rem', fontStyle: 'italic', opacity: 0.95 }}>
-                      {theme.scripture}
-                    </p>
-                  )}
-                  {theme.description && (
-                    <p style={{ fontSize: '1.1rem', lineHeight: '1.8', maxWidth: '800px', margin: '0 auto', opacity: 0.9 }}>
-                      {theme.description}
-                    </p>
+                  {theme.flyerUrl && (
+                    <div className="theme-flyer-container" style={{
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '16px',
+                      padding: '1.5rem',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}>
+                      <img 
+                        src={getImageUrl(theme.flyerUrl)} 
+                        alt={`${year} Theme Flyer`}
+                        style={{
+                          maxWidth: '100%',
+                          maxHeight: '500px',
+                          objectFit: 'contain',
+                          borderRadius: '8px'
+                        }}
+                        onError={(e) => {
+                          console.log('Failed to load theme flyer:', theme.flyerUrl);
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    </div>
                   )}
                 </div>
               );
@@ -285,58 +345,112 @@ const Home = () => {
       </section>
 
       {/* Latest Sermon */}
-      {content?.latestMessage?.enabled && (
+      {content?.latestMessage?.enabled && latestSermon && (
         <section className="section latest-sermon">
           <div className="container">
             <h2 className="section-title">{content?.latestMessage?.title || 'Latest Message'}</h2>
             <div className="sermon-container">
               <div className="sermon-video">
-                {getEmbedUrl(content?.latestMessage?.sermon?.videoUrl) ? (
+                {((latestSermon.messageType === 'video' || !latestSermon.messageType) && getEmbedUrl(latestSermon?.videoUrl)) ? (
                   <iframe
                     width="100%"
                     height="100%"
-                    src={`${getEmbedUrl(content.latestMessage.sermon.videoUrl)}?feature=oembed&rel=0&modestbranding=1`}
-                    title={content.latestMessage.sermon.title}
+                    src={`${getEmbedUrl(latestSermon.videoUrl)}?feature=oembed&rel=0&modestbranding=1`}
+                    title={latestSermon.title}
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
                     referrerPolicy="strict-origin-when-cross-origin"
                     style={{ borderRadius: '8px' }}
                   ></iframe>
-                ) : null}
-                <div className="placeholder-video" style={{ display: getEmbedUrl(content?.latestMessage?.sermon?.videoUrl) ? 'none' : 'flex' }}>
-                  <div style={{ textAlign: 'center', padding: '2rem' }}>
-                    <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>⚠️ Video Not Available</p>
-                    <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
-                      {content?.latestMessage?.sermon?.videoUrl ? 
-                        'This video may be private, unavailable, or embedding may be disabled.' : 
-                        'No video URL provided.'}
-                    </p>
-                    {content?.latestMessage?.sermon?.videoUrl && (
-                      <a 
-                        href={content.latestMessage.sermon.videoUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="btn btn-primary"
-                        style={{ display: 'inline-block' }}
-                      >
-                        Watch on YouTube
-                      </a>
+                ) : latestSermon.messageType === 'text' && latestSermon.textContent ? (
+                  <div style={{ 
+                    padding: '2rem', 
+                    background: 'white', 
+                    borderRadius: '8px',
+                    height: '100%',
+                    overflowY: 'auto',
+                    lineHeight: '1.8',
+                    color: 'var(--text-primary)'
+                  }}>
+                    <div style={{ whiteSpace: 'pre-wrap' }}>{latestSermon.textContent}</div>
+                  </div>
+                ) : latestSermon.messageType === 'slides' && latestSermon.slidesUrl ? (
+                  <div style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    background: '#f5f5f5',
+                    borderRadius: '8px'
+                  }}>
+                    {latestSermon.slidesUrl.endsWith('.pdf') ? (
+                      <iframe
+                        src={getImageUrl(latestSermon.slidesUrl)}
+                        width="100%"
+                        height="100%"
+                        style={{ border: 'none', borderRadius: '8px' }}
+                        title="Sermon Slides"
+                      ></iframe>
+                    ) : (
+                      <img 
+                        src={getImageUrl(latestSermon.slidesUrl)}
+                        alt="Sermon Slides"
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                      />
                     )}
                   </div>
-                </div>
+                ) : (
+                  <div className="placeholder-video" style={{ display: 'flex' }}>
+                    <div style={{ textAlign: 'center', padding: '2rem' }}>
+                      <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>⚠️ Content Not Available</p>
+                      <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                        {latestSermon?.videoUrl ? 
+                          'This video may be private, unavailable, or embedding may be disabled.' : 
+                          'No content provided.'}
+                      </p>
+                      {latestSermon?.videoUrl && (
+                        <a 
+                          href={latestSermon.videoUrl.replace('/embed/', '/watch?v=')} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="btn btn-primary"
+                          style={{ display: 'inline-block' }}
+                        >
+                          Watch on YouTube
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="sermon-info">
-                <h3>{content?.latestMessage?.sermon?.category || 'Sunday Service'}</h3>
-                <p className="sermon-title">{content?.latestMessage?.sermon?.title || 'Walking in Faith and Purpose'}</p>
+                <h3>{latestSermon?.series || 'Sunday Service'}</h3>
+                <p className="sermon-title">{latestSermon?.title || 'Walking in Faith and Purpose'}</p>
                 <p className="sermon-date">
-                  {content?.latestMessage?.sermon?.speaker && `${content.latestMessage.sermon.speaker} • `}
-                  {content?.latestMessage?.sermon?.date || 'November 10, 2025'}
+                  {latestSermon?.speaker && `${latestSermon.speaker} • `}
+                  {latestSermon?.date ? new Date(latestSermon.date).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  }) : 'November 10, 2025'}
                 </p>
                 <p className="sermon-description">
-                  {content?.latestMessage?.sermon?.description || 'Discover how to live a life of faith and walk in your God-given purpose.'}
+                  {latestSermon?.description || 'Discover how to live a life of faith and walk in your God-given purpose.'}
                 </p>
-                <Link to="/watch" className="btn btn-primary">Watch More Sermons</Link>
+                {latestSermon.messageType === 'slides' && latestSermon.slidesUrl && (
+                  <a 
+                    href={getImageUrl(latestSermon.slidesUrl)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-secondary"
+                    style={{ marginBottom: '1rem', display: 'inline-block' }}
+                  >
+                    📥 Download Slides
+                  </a>
+                )}
+                <Link to="/watch" className="btn btn-primary">View All Messages</Link>
               </div>
             </div>
           </div>
